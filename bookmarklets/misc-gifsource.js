@@ -1,0 +1,1 @@
+javascript: (function() { if (window.runSlots && window.runSlots.item.video_source) { window.location = window.runSlots.item.video_source; } else if (superAwesomeGlobalGfyJSON && superAwesomeGlobalGfyJSON.url) { window.location = superAwesomeGlobalGfyJSON.url; } else { alert('no video source found'); } })();

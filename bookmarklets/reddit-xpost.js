@@ -1,0 +1,1 @@
+javascript: (function() { document.location = 'http://reddit.com/submit?resubmit=true&url=' + encodeURIComponent($('.entry .title').first().find('a.title').attr('href')) + '&title=' + encodeURIComponent($('meta[property="og:title"]').attr('content').replace(/ .{1} \/?r\/\w+$/, '')); })();

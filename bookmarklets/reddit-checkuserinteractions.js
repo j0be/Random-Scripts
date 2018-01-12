@@ -1,0 +1,1 @@
+javascript: (function() {    $('.sitetable .arrow.downmod, #siteTable .arrow.upmod').parents('.thing').addClass('interacted');    $('.sitetable .parent a[href*="' + $('#header #header-bottom-right .user a').first().text() + '"]').parents('.thing').addClass('interacted');    $('.sitetable>.thing:not(.interacted)').remove();})();
