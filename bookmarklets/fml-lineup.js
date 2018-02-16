@@ -41,12 +41,41 @@ javascript: (function() {
     return fmlData;
   };
   window.getBestLineup = function(fmlData) {
-    var money = 1000,
-      screens = 8,
-      penalty = 2000000,
-      maxWinning = 0;
-
+    window.maxWinning = 0;
+    getVariation(fmlData, [], 1000);
     return "I'm not done yet!";
+  };
+
+  window.getVariation = function(fmlData, lineup, bux) {
+    var penalty = { 'title': 'Empty', 'projected': -2000000, 'bux': 1000};
+    if (lineup.length < 8) {
+      for (i=0;i<=fmlData.length; i++) {
+        if (fmlData[i]) {
+          if (bux - fmlData[i].bux >= 0) {
+            pass = lineup;
+            pass.push(fmlData[i]);
+            getVariation(fmlData, pass, bux - fmlData[i].bux);
+          }
+        } else {
+          pass = lineup;
+          for (var ii=lineup.length; ii<8; ii++) {
+            pass.push(penalty);
+          }
+          getVariation(fmlData, pass, bux);
+          break;
+        }
+      }
+    } else {
+      console.log(lineup, getValue(lineup));
+    }
+  };
+
+  window.getValue = function (vlineup) {
+    var value = 0;
+    for (var i = 0; i < vlineup.length; i++) {
+      value += vlineup[i]['projected'];
+    }
+    return value;
   };
 
   if (document.location.host != 'pro.boxoffice.com' && !document.location.href.match('data=')) {
