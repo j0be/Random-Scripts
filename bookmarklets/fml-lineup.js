@@ -41,32 +41,46 @@ javascript: (function() {
     return fmlData;
   };
   window.getBestLineup = function(fmlData) {
+    window.bestLineup = [];
     window.maxWinning = 0;
+    window.variations = 0;
     getVariation(fmlData, [], 1000);
-    return "I'm not done yet!";
+
+    var str = '';
+    for (var i=0; i<bestLineup.length; i++) {
+      str += bestLineup[i].title + ' ' + bestLineup[i].day + ' | ' + Number(bestLineup[i].projected).toLocaleString('en-US', { style: 'currency', currency: 'USD' }) + '\n';
+    }
+    str += '\nProjected: '+ Number(maxWinning).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    return str;
   };
 
-  window.getVariation = function(fmlData, lineup, bux) {
-    var penalty = { 'title': 'Empty', 'projected': -2000000, 'bux': 1000};
-    if (lineup.length < 8) {
-      for (i=0;i<=fmlData.length; i++) {
-        if (fmlData[i]) {
-          if (bux - fmlData[i].bux >= 0) {
-            pass = lineup;
-            pass.push(fmlData[i]);
-            getVariation(fmlData, pass, bux - fmlData[i].bux);
-          }
+  window.getVariation = function(fml, passedLineup, bux) {
+    window.variations ++;
+    var penalty = {'title': 'Empty', 'projected': -2000000, 'day': '', 'bux': 0};
+    if (passedLineup.length < 8) {
+      for (var m=0; m<fml.length; m++) {
+        var lineup = passedLineup.slice();
+        var movie = fml[m],
+          prevBux = lineup.length ? lineup[lineup.length - 1].bux : 1000,
+          tooExpensive = bux - movie.bux < 0,
+          cheaperThanPrevious = movie.bux <= prevBux;
+        
+        if (!tooExpensive && cheaperThanPrevious && lineup.length < 8) {
+          lineup.push(movie);
+          getVariation(fml, lineup, bux - movie.bux);
         } else {
-          pass = lineup;
-          for (var ii=lineup.length; ii<8; ii++) {
-            pass.push(penalty);
+          for (var i=lineup.length; i<8; i++) {
+            lineup.push(penalty);
           }
-          getVariation(fmlData, pass, bux);
-          break;
+          getVariation(fml, lineup, bux);
         }
       }
     } else {
-      console.log(lineup, getValue(lineup));
+      var lineupVal = getValue(passedLineup);
+      if (lineupVal > window.maxWinning) {
+        window.maxWinning = lineupVal;
+        window.bestLineup = passedLineup.slice();
+      }
     }
   };
 
