@@ -1,5 +1,23 @@
 javascript: (function () {
+  window.flattenData = function (projectedData) {
+    var tempArr = {},
+      returnArr = {};
+    console.log(projectedData);
+    for (var source in projectedData) {
+      for (var movie in projectedData[source]) {
+        tempArr[movie] = tempArr[movie] ? tempArr[movie] : { sum: 0, count: 0};
+        tempArr[movie].sum = tempArr[movie].sum + projectedData[source][movie];
+        tempArr[movie].count =tempArr[movie].count + 1;
+      }
+    }
+    for (var movie in tempArr) {
+      returnArr[movie] = tempArr[movie].sum / tempArr[movie].count;
+    }
+    console.log(returnArr);
+    return returnArr;
+  };
   window.setupData = function (projectedData) {
+    projectedData = flattenData(projectedData);
     var weekendWeight = {
       '3': {
         'FRI': .4184,
@@ -67,7 +85,6 @@ javascript: (function () {
     });
     return str;
   };
-
   window.getVariation = function (fml, passedLineup, bux) {
     window.variations++;
     var penalty = {
@@ -102,7 +119,6 @@ javascript: (function () {
       }
     }
   };
-
   window.getValue = function (vlineup) {
     var value = 0;
     for (var i = 0; i < vlineup.length; i++) {
@@ -111,22 +127,62 @@ javascript: (function () {
     return value;
   };
 
-  if (document.location.host != 'pro.boxoffice.com' && !document.location.href.match('data=')) {
+  if (document.location.host != 'www.boxofficemojo.com' &&
+      document.location.host != 'pro.boxoffice.com' &&
+      document.location.host != 'fantasymovieleague.com') {
+    document.location.href = 'http://www.boxofficemojo.com/news/';
+  } else if (document.location.href =='http://www.boxofficemojo.com/news/') {
+    var rows = Array.from(document.querySelectorAll('ul.nav_tabs ~ table table')[0].getElementsByTagName('tr')).slice(1);
+    for (var i=0; i<rows.length; i++) {
+      var dateStr = rows[i].querySelectorAll('td>font>b')[0],
+        date = new Date(dateStr.innerHTML);
+      console.log(date.getDay());
+      if (date.getDay() == 4) {
+        document.location.href = rows[i].getElementsByTagName('a')[0].getAttribute('href');
+        break;
+      }
+    }
+  } else if (document.location.href.match('boxofficemojo.com/news/')) {
+    var forecasts = document.querySelectorAll('h1 ~ ul'),
+      movies = forecasts[forecasts.length - 1].getElementsByTagName('b'),
+      vals = forecasts[forecasts.length - 1].getElementsByTagName('li');
+
+    projectedArr = {
+      'bom': {}
+    };
+    for (var i=0; i<movies.length; i++) {
+      projectedArr.bom[movies[i].innerHTML.replace(/\W/g, '').toLowerCase()] =
+        parseFloat(vals[i].innerHTML.replace(/.*? - \$/, '').replace(/[^\d\.]/g, '')) * 1000000;
+    }
+    document.location.href = 'http://pro.boxoffice.com/category/boxoffice-forecasts/?data=' + JSON.stringify(projectedArr);
+  } else if (document.location.host != 'pro.boxoffice.com' &&
+      document.location.host != 'fantasymovieleague.com') {
     document.location.href = 'http://pro.boxoffice.com/category/boxoffice-forecasts/';
-  } else if (document.getElementsByTagName('body')[0].className.match('category')) {
-    document.location.href = document.getElementsByTagName('h3')[0].getElementsByTagName('a')[0].getAttribute('href');
-  } else if (document.getElementsByTagName('body')[0].className.match('single')) {
+  } else if (document.location.host == 'pro.boxoffice.com' && document.getElementsByTagName('body')[0].className.match('category')) {
+    var links = document.getElementsByTagName('h3');
+    for (var i=0; i<links.length; i++) {
+      console.log(links[i].getElementsByTagName('a')[0].innerHTML);
+      if (links[i].getElementsByTagName('a')[0].innerHTML.match('Weekend')) {
+        document.location.href = links[i].getElementsByTagName('a')[0].getAttribute('href') + document.location.search;
+        break;
+      }
+    }
+  } else if (document.location.host == 'pro.boxoffice.com' && document.getElementsByTagName('body')[0].className.match('single')) {
     var post = document.getElementsByClassName('post-container')[0],
       rows = Array.from(post.getElementsByTagName('tbody')[0].getElementsByTagName('tr')).slice(1),
       nameCol = 0,
       projectedCol = 2,
-      projectedArr = {};
+      projectedArr = document.location.href.match('data=') ?
+        JSON.parse(decodeURIComponent(document.location.search.replace("?data=", ''))) :
+        {};
+      projectedArr['bop'] = {};
     for (var key in rows) {
       var row = rows[key];
-      projectedArr[row.getElementsByTagName('td')[nameCol].innerHTML.replace(/\W/g, '').toLowerCase()] = parseFloat(row.getElementsByTagName('td')[projectedCol].innerHTML.replace(/\D/g, ''));
+      projectedArr.bop[row.getElementsByTagName('td')[nameCol].innerHTML.replace(/\W/g, '').toLowerCase()] =
+        parseFloat(row.getElementsByTagName('td')[projectedCol].innerHTML.replace(/\D/g, ''));
     }
     document.location.href = 'http://fantasymovieleague.com/?data=' + JSON.stringify(projectedArr);
-  } else if (document.location.host == 'fantasymovieleague.com' && document.location.href.match('data=')) {
+  } else if (document.location.host == 'fantasymovieleague.com' && !!document.location.href.match('data=')) {
     var projectedData = JSON.parse(decodeURIComponent(document.location.search.replace("?data=", '')));
     fmlData = setupData(projectedData);
     output = getBestLineup(fmlData);
