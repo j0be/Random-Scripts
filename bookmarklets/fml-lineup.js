@@ -93,11 +93,11 @@ javascript: (function () {
       for (var i = 0; i < lineup.length; i++) {
         if (lineup[i].title != 'info') {
           table.innerHTML += '<tr style="color:#ddd;"><th>' + lineup[i].title + ' ' + lineup[i].day + '</th>'+
-          '<td style="text-align:right;">'+Number(lineup[i].projected).toLocaleString('en-US', { style: 'currency', currency: 'USD' }) + '</td></tr>';
+            '<td style="text-align:right;">' + Number(lineup[i].projected).toLocaleString('en-US', { style: 'currency', currency: 'USD' }).slice(0, -3) + '</td></tr>';
         } else {
           table.innerHTML += '<tfooter>'+
             '<tr><th style="border-top: 1px solid #fff;">' + lineup[i].bux + ' bux remaining</small></th>'+
-            '<td style="border-top: 1px solid #fff; text-align:right;">' + Number(lineup[i].projected).toLocaleString('en-US', { style: 'currency', currency: 'USD' }) + '</td></tr>' +
+            '<td style="border-top: 1px solid #fff; text-align:right;">' + Number(lineup[i].projected).toLocaleString('en-US', { style: 'currency', currency: 'USD' }).slice(0, -3) + '</td></tr>' +
           '<tfooter>';
         }
       }
