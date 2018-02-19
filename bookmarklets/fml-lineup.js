@@ -1,15 +1,23 @@
-javascript: (function() {
+javascript: (function () {
   window.setupData = function (projectedData) {
     var weekendWeight = {
-      'FRI': .38,
-      'SAT': .34,
-      'SUN': .21,
-      'MON': .07
+      '3': {
+        'FRI': .4184,
+        'SAT': .3309,
+        'SUN': .2507
+      },
+      '4': {
+        'FRI': .311,
+        'SAT': .2793,
+        'SUN': .2798,
+        'MON': .1298
+      }
     };
     var movies = document.querySelectorAll('ul.cineplex__bd-movies .cineplex__bd-movie-item .outer-wrap'),
       titles = document.querySelectorAll('ul.cineplex__bd-movies .cineplex__bd-movie-item .title'),
       bux = document.querySelectorAll('ul.cineplex__bd-movies .cineplex__bd-movie-item .cost-wrap');
     var fmlData = [];
+    var numdays = eval(document.querySelectorAll(".cineplex__bd-week_details .cineplex-details-name-value.first strong")[0].innerHTML.replace(/[a-z]/gi, '')) * -1 + 1;
     for (var i = 0; i < movies.length; i++) {
       var title = titles[i].innerHTML.trim();
       var day = title.match(/ONLY$/) ?
@@ -27,7 +35,7 @@ javascript: (function() {
       }
 
       if (day) {
-        projected = Math.round(projected * weekendWeight[day]);
+        projected = Math.round(projected * weekendWeight[numdays][day]);
       }
 
       fmlData.push({
@@ -40,36 +48,47 @@ javascript: (function() {
 
     return fmlData;
   };
-  window.getBestLineup = function(fmlData) {
+  window.getBestLineup = function (fmlData) {
     window.bestLineup = [];
     window.maxWinning = 0;
     window.variations = 0;
     getVariation(fmlData, [], 1000);
 
     var str = '';
-    for (var i=0; i<bestLineup.length; i++) {
-      str += bestLineup[i].title + ' ' + bestLineup[i].day + ' | ' + Number(bestLineup[i].projected).toLocaleString('en-US', { style: 'currency', currency: 'USD' }) + '\n';
+    for (var i = 0; i < bestLineup.length; i++) {
+      str += bestLineup[i].title + ' ' + bestLineup[i].day + ' | ' + Number(bestLineup[i].projected).toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      }) + '\n';
     }
-    str += '\nProjected: '+ Number(maxWinning).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    str += '\nProjected: ' + Number(maxWinning).toLocaleString('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    });
     return str;
   };
 
-  window.getVariation = function(fml, passedLineup, bux) {
-    window.variations ++;
-    var penalty = {'title': 'Empty', 'projected': -2000000, 'day': '', 'bux': 0};
+  window.getVariation = function (fml, passedLineup, bux) {
+    window.variations++;
+    var penalty = {
+      'title': 'Empty',
+      'projected': -2000000,
+      'day': '',
+      'bux': 0
+    };
     if (passedLineup.length < 8) {
-      for (var m=0; m<fml.length; m++) {
+      for (var m = 0; m < fml.length; m++) {
         var lineup = passedLineup.slice();
         var movie = fml[m],
           prevBux = lineup.length ? lineup[lineup.length - 1].bux : 1000,
           tooExpensive = bux - movie.bux < 0,
           cheaperThanPrevious = movie.bux <= prevBux;
-        
+
         if (!tooExpensive && cheaperThanPrevious && lineup.length < 8) {
           lineup.push(movie);
           getVariation(fml, lineup, bux - movie.bux);
         } else {
-          for (var i=lineup.length; i<8; i++) {
+          for (var i = lineup.length; i < 8; i++) {
             lineup.push(penalty);
           }
           getVariation(fml, lineup, bux);
@@ -106,7 +125,7 @@ javascript: (function() {
       var row = rows[key];
       projectedArr[row.getElementsByTagName('td')[nameCol].innerHTML.replace(/\W/g, '').toLowerCase()] = parseFloat(row.getElementsByTagName('td')[projectedCol].innerHTML.replace(/\D/g, ''));
     }
-    document.location.href = 'http://fantasymovieleague.com/?data='+JSON.stringify(projectedArr);
+    document.location.href = 'http://fantasymovieleague.com/?data=' + JSON.stringify(projectedArr);
   } else if (document.location.host == 'fantasymovieleague.com' && document.location.href.match('data=')) {
     var projectedData = JSON.parse(decodeURIComponent(document.location.search.replace("?data=", '')));
     fmlData = setupData(projectedData);
