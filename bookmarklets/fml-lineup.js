@@ -2,7 +2,6 @@ javascript: (function () {
   window.flattenData = function (projectedData) {
     var tempArr = {},
       returnArr = {};
-    console.log(projectedData);
     for (var source in projectedData) {
       for (var movie in projectedData[source]) {
         tempArr[movie] = tempArr[movie] ? tempArr[movie] : { sum: 0, count: 0};
@@ -13,7 +12,6 @@ javascript: (function () {
     for (var movie in tempArr) {
       returnArr[movie] = tempArr[movie].sum / tempArr[movie].count;
     }
-    console.log(returnArr);
     return returnArr;
   };
   window.setupData = function (projectedData) {
@@ -63,36 +61,51 @@ javascript: (function () {
         'bux': cost
       });
     }
-
-    return fmlData;
-  };
-  window.getBestLineup = function (fmlData) {
-    window.bestLineup = [];
-    window.maxWinning = 0;
-    window.variations = 0;
-    getVariation(fmlData, [], 1000);
-
-    var str = '';
-    for (var i = 0; i < bestLineup.length; i++) {
-      str += bestLineup[i].title + ' ' + bestLineup[i].day + ' | ' + Number(bestLineup[i].projected).toLocaleString('en-US', {
-        style: 'currency',
-        currency: 'USD'
-      }) + '\n';
-    }
-    str += '\nProjected: ' + Number(maxWinning).toLocaleString('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    });
-    return str;
-  };
-  window.getVariation = function (fml, passedLineup, bux) {
-    window.variations++;
-    var penalty = {
+    fmlData.push({
       'title': 'Empty',
       'projected': -2000000,
       'day': '',
       'bux': 0
-    };
+    });
+
+    return fmlData;
+  };
+  window.getBestLineups = function (fmlData) {
+    window.variations = [];
+    getVariation(fmlData, [], 1000);
+    var bestVariations = window.variations.slice().sort(function(a,b) {
+      var aproj = a[a.length-1].projected,
+        bproj = b[b.length - 1].projected;
+      return aproj > bproj ? -1 : (aproj < bproj ? 1 : 0);
+    });
+
+    if (document.querySelectorAll('#screens-panel .fml-calc').length == 0) {
+      var el = document.createElement('div');
+      el.setAttribute('class', 'fml-calc');
+      document.getElementById('screens-panel').appendChild(el);
+    }
+    document.querySelectorAll('#screens-panel .fml-calc')[0].innerHTML = '';
+    
+    for (var l = 0; l < 10; l++) {
+      var lineup = bestVariations[l],
+        table = document.createElement('table');
+      table.setAttribute('style','float: left; color: #fff; width: 45%; margin-right: 5%; margin-bottom: 2em;');
+      for (var i = 0; i < lineup.length; i++) {
+        if (lineup[i].title != 'info') {
+          table.innerHTML += '<tr style="color:#ddd;"><th>' + lineup[i].title + ' ' + lineup[i].day + '</th>'+
+          '<td style="text-align:right;">'+Number(lineup[i].projected).toLocaleString('en-US', { style: 'currency', currency: 'USD' }) + '</td></tr>';
+        } else {
+          table.innerHTML += '<tfooter>'+
+            '<tr><th style="border-top: 1px solid #fff;">' + lineup[i].bux + ' bux remaining</small></th>'+
+            '<td style="border-top: 1px solid #fff; text-align:right;">' + Number(lineup[i].projected).toLocaleString('en-US', { style: 'currency', currency: 'USD' }) + '</td></tr>' +
+          '<tfooter>';
+        }
+      }
+
+      document.querySelectorAll('#screens-panel .fml-calc')[0].appendChild(table);
+    }
+  };
+  window.getVariation = function (fml, passedLineup, bux) {
     if (passedLineup.length < 8) {
       for (var m = 0; m < fml.length; m++) {
         var lineup = passedLineup.slice();
@@ -104,27 +117,26 @@ javascript: (function () {
         if (!tooExpensive && cheaperThanPrevious && lineup.length < 8) {
           lineup.push(movie);
           getVariation(fml, lineup, bux - movie.bux);
-        } else {
-          for (var i = lineup.length; i < 8; i++) {
-            lineup.push(penalty);
-          }
-          getVariation(fml, lineup, bux);
         }
       }
     } else {
-      var lineupVal = getValue(passedLineup);
-      if (lineupVal > window.maxWinning) {
-        window.maxWinning = lineupVal;
-        window.bestLineup = passedLineup.slice();
-      }
+      var lineup = passedLineup.slice();
+      lineup.push(getInfo(passedLineup));
+      window.variations.push(lineup);
     }
   };
-  window.getValue = function (vlineup) {
-    var value = 0;
+  window.getInfo = function (vlineup) {
+    var projected = 0,
+      bux = 1000;
     for (var i = 0; i < vlineup.length; i++) {
-      value += vlineup[i]['projected'];
+      projected += vlineup[i]['projected'];
+      bux -= vlineup[i]['bux'];
     }
-    return value;
+    return {
+      'title': 'info',
+      'projected': projected,
+      'bux': bux,
+    };
   };
 
   if (document.location.host != 'www.boxofficemojo.com' &&
@@ -185,8 +197,7 @@ javascript: (function () {
   } else if (document.location.host == 'fantasymovieleague.com' && !!document.location.href.match('data=')) {
     var projectedData = JSON.parse(decodeURIComponent(document.location.search.replace("?data=", '')));
     fmlData = setupData(projectedData);
-    output = getBestLineup(fmlData);
-    alert(output);
+    getBestLineups(fmlData);
   } else {
     alert('This shouldn\'t have happened');
   };
