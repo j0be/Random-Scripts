@@ -243,7 +243,7 @@ javascript: (function () {
           var projected = projectedData[code],
             hasProjection = !!projected;
           if (!hasProjection) {
-            projected = cost * 100000;
+            projected = cost * 75000;
             movies[i].setAttribute('style', 'border: 1px solid #f00');
           }
 
