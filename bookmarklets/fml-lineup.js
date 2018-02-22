@@ -55,17 +55,19 @@ javascript: (function () {
           }, true);
           calc.appendChild(form);
           var styles = document.createElement('style');
-          styles.innerHTML += '.fml-calc { padding: 1em 0; } ';
+          styles.innerHTML += '.fml-calc { padding: 1em 0; margin-top: 3em } ';
           styles.innerHTML += '.fml-calc::before, .fml-calc::after { content: ""; display: block; clear: both } ';
           styles.innerHTML += '.fml-calc .output { float: left; color: #ddd; margin-bottom: 1em; margin-right: 1em; padding-right: 1em; border-right: 1px solid #9a1b57; } ';
-          styles.innerHTML += '.fml-calc .output>div { float: left; clear: left; opacity: .7 } ';
+          styles.innerHTML += '.fml-calc .output>div { float: left; clear: left; opacity: .2; transition: .3s all ease-in-out } ';
           styles.innerHTML += '.fml-calc .output>div:first-child, .fml-calc .output>div:hover { opacity: 1 } ';
           styles.innerHTML += '.fml-calc .output>div:first-child { margin-bottom: 2em; border-bottom: 1px solid #9a1c57; } ';
-          styles.innerHTML += '.fml-calc .output img { box-shadow: 0 0 20px #9a1c57; width: 96px;  float: left; margin-bottom: .2em; box-sizing: content-box; border-radius: 4px } ';
+          styles.innerHTML += '.fml-calc .output img { box-shadow: 0 0 20px #9a1c57; width: 86px; float: left; margin-bottom: .2em; box-sizing: content-box; border-radius: 4px } ';
           styles.innerHTML += '.fml-calc .output img.bestvalue { box-shadow: 0 0 20px #38ff38; border-bottom: 5px solid #38ff38; } ';
           styles.innerHTML += '.fml-calc .output img + img { margin-left: .5em; } ';
+          styles.innerHTML += '@media (max-width: 1029px) { .fml-calc .output img:nth-child(5) {clear: left; margin-left: 0; }} ';
+          styles.innerHTML += '.fml-calc .output>div+div img { box-shadow: none !important; } ';
           styles.innerHTML += '.fml-calc .output h2 { float: left; clear: left } ';
-          styles.innerHTML += '.fml-calc .output span { float: right; margin-bottom: 1.5em; } ';
+          styles.innerHTML += '.fml-calc .output span { float: right; font-size: 1.6em; font-weight: bold; margin-bottom: 0.4em; } ';
           styles.innerHTML += '.fml-calc .calc-form { float: left; color: #fff; margin-top: -18px; } ';
           styles.innerHTML += '.fml-calc .calc-form label, .fml-calc .calc-form input { display: block; text-align: right } ';
           styles.innerHTML += '.fml-calc .calc-form label { font-size: 12px; margin: 0 0 .3em; text-align: center } ';
@@ -128,7 +130,7 @@ javascript: (function () {
         }
         document.getElementsByTagName('html')[0].scrollTop =
           document.querySelectorAll('.fml-calc')[0].getBoundingClientRect().y +
-          document.getElementsByTagName('html')[0].scrollTop;
+          document.getElementsByTagName('html')[0].scrollTop - 100;
       },
       modifyProjected: function (element, value) {
         var input = element.parentElement.getElementsByTagName('input')[0],
