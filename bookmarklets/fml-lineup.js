@@ -68,8 +68,9 @@ javascript: (function () {
           styles.innerHTML += '.fml-calc .calc-form label { font-size: 10px; margin: .5em 0 } ';
           styles.innerHTML += '.fml-calc .calc-form label.noProjection { color: #f66; } ';
           styles.innerHTML += '.fml-calc .calc-form input { background: rgba(255,255,255,.2); color: #fff } ';
-          styles.innerHTML += '.fml-calc .calc-form input, .fml-calc .calc-form button { border: 0; padding: .2em .5em; font-family: monospace; width: 100% } ';
-          styles.innerHTML += '.fml-calc .calc-form button { font-family: inherit; margin: 1em 0; font-size: 1.5em } ';
+          styles.innerHTML += '.fml-calc .calc-form input, .fml-calc .calc-form button { display: inline-block; border: 0; padding: .2em .5em; font-family: monospace } ';
+          styles.innerHTML += '.fml-calc .calc-form button { font-family: inherit; height: 1.9em; cursor: pointer } ';
+          styles.innerHTML += '.fml-calc .calc-form>button { margin: 1em 0; font-size: 1.5em; width: 100% } ';
           document.querySelectorAll('head')[0].appendChild(styles);
         }
         calcform = document.querySelectorAll('.fml-calc .calc-form')[0];
@@ -80,7 +81,11 @@ javascript: (function () {
               fml.formdata[i].title + ' ' + fml.formdata[i].day + 
               (!fml.formdata[i].hasProjection ? '*':'') +
             '</label>';
-            calcform.innerHTML += '<input id="calc-' + i + '" name="' + fml.formdata[i].code + '" value="' + fml.formdata[i].projected + '" />';
+            calcform.innerHTML += '<div>' +
+              '<button title="Subtract 10% from value" onclick="fml.handlers.modifyProjected(this,-10)">-</button>' +
+              '<input id="calc-' + i + '" name="' + fml.formdata[i].code + '" value="' + fml.formdata[i].projected + '" />' +
+              '<button title="Add 10% to value" onclick="fml.handlers.modifyProjected(this,10)">+</button>' +
+            '</div>';
           }
         }
         calcform.innerHTML += '<button onclick="fml.handlers.recalculate()">Recalculate</button>';
@@ -119,6 +124,11 @@ javascript: (function () {
         document.getElementsByTagName('html')[0].scrollTop =
           document.querySelectorAll('.fml-calc')[0].getBoundingClientRect().y +
           document.getElementsByTagName('html')[0].scrollTop;
+      },
+      modifyProjected: function (element, value) {
+        var input = element.parentElement.getElementsByTagName('input')[0],
+          inputVal = parseFloat(input.value);
+        input.value = Math.round(inputVal * ((100+value)/100));
       }
     },
     helpers: {
