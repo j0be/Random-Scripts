@@ -66,6 +66,7 @@ javascript: (function () {
           styles.innerHTML += '.fml-calc .calc-form { float: right; color: #fff } ';
           styles.innerHTML += '.fml-calc .calc-form label, .fml-calc .calc-form input { display: block; text-align: right } ';
           styles.innerHTML += '.fml-calc .calc-form label { font-size: 10px; margin: .5em 0 } ';
+          styles.innerHTML += '.fml-calc .calc-form label.noProjection { color: #f66; } ';
           styles.innerHTML += '.fml-calc .calc-form input { background: rgba(255,255,255,.2); color: #fff } ';
           styles.innerHTML += '.fml-calc .calc-form input, .fml-calc .calc-form button { border: 0; padding: .2em .5em; font-family: monospace; width: 100% } ';
           styles.innerHTML += '.fml-calc .calc-form button { font-family: inherit; margin: 1em 0; font-size: 1.5em } ';
@@ -75,7 +76,10 @@ javascript: (function () {
         calcform.innerHTML = '';
         for (var i = 0; i < fml.formdata.length; i++) {
           if (fml.formdata[i].bux > 0) {
-            calcform.innerHTML += '<label for="calc-' + i + '">' + fml.formdata[i].title + ' ' + fml.formdata[i].day + '</label>';
+            calcform.innerHTML += '<label ' + (!fml.formdata[i].hasProjection ? 'class="noProjection" title="Autofilled projection data"' : '')+' for="calc-' + i + '">' + 
+              fml.formdata[i].title + ' ' + fml.formdata[i].day + 
+              (!fml.formdata[i].hasProjection ? '*':'') +
+            '</label>';
             calcform.innerHTML += '<input id="calc-' + i + '" name="' + fml.formdata[i].code + '" value="' + fml.formdata[i].projected + '" />';
           }
         }
@@ -236,8 +240,9 @@ javascript: (function () {
           }
           var code = title.replace(/\W/g, '').toLowerCase();
 
-          var projected = projectedData[code];
-          if (!projected) {
+          var projected = projectedData[code],
+            hasProjection = !!projected;
+          if (!hasProjection) {
             projected = cost * 100000;
             movies[i].setAttribute('style', 'border: 1px solid #f00');
           }
@@ -252,6 +257,7 @@ javascript: (function () {
             'title': title,
             'day': day,
             'projected': projected,
+            'hasProjection': hasProjection,
             'bux': cost
           });
         }
