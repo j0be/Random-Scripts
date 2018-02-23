@@ -55,6 +55,7 @@ javascript: (function () {
           }, true);
           calc.appendChild(form);
           var styles = document.createElement('style');
+          styles.innerHTML += '.cineplex .is-locked-message-wrap, .cineplex.is-locked .is-locked-message { max-height: 670px } ';
           styles.innerHTML += '.fml-calc { padding: 1em 0; margin-top: 3em } ';
           styles.innerHTML += '.fml-calc::before, .fml-calc::after { content: ""; display: block; clear: both } ';
           styles.innerHTML += '.fml-calc .output { float: left; color: #ddd; margin-bottom: 1em; margin-right: 1em; padding-right: 1em; border-right: 1px solid #9a1b57; } ';
@@ -234,7 +235,7 @@ javascript: (function () {
           }
         }
         for (var movie in tempArr) {
-          returnArr[movie] = tempArr[movie].sum / tempArr[movie].count;
+          returnArr[movie] = Math.round(tempArr[movie].sum / tempArr[movie].count);
         }
         return returnArr;
       },
@@ -245,6 +246,7 @@ javascript: (function () {
           bux = document.querySelectorAll('ul.cineplex__bd-movies .cineplex__bd-movie-item .cost-wrap');
         var fmlData = [];
         var numdays = eval(document.querySelectorAll(".cineplex__bd-week_details .cineplex-details-name-value.first strong")[0].innerHTML.replace(/[a-z]/gi, '')) * -1 + 1;
+
         for (var i = 0; i < movies.length; i++) {
           var title = titles[i].innerHTML.trim(),
             img = imgs[i].getAttribute('data-img-src');
