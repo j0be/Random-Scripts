@@ -12,6 +12,7 @@ javascript: (function () {
       '3': { 'FRI': .4184, 'SAT': .3309, 'SUN': .2507 },
       '4': { 'FRI': .311, 'SAT': .2793, 'SUN': .2798, 'MON': .1298 }
     },
+    staleThreshold: 4,
     handlers: {
       prompt: function (str) {
         str = (str ? str : '') + 'Where would you like to go?';
@@ -160,9 +161,17 @@ javascript: (function () {
           if (document.getElementsByTagName('body')[0].className.match('category')) {
             var links = document.getElementsByTagName('h3');
             for (var i = 0; i < links.length; i++) {
+              var dateStr = links[i].parentNode.querySelectorAll('.date')[0],
+                date = new Date(dateStr.innerHTML),
+                today = (new Date()).setHours(0, 0, 0, 0); 
+
               if (links[i].getElementsByTagName('a')[0].innerHTML.match('Weekend')) {
-                document.location.href = links[i].getElementsByTagName('a')[0].getAttribute('href') +
-                  '#data=' + encodeURIComponent(JSON.stringify(fml.data));
+                if (today - date < fml.staleThreshold * 24 * 60 * 60 * 1000) {
+                  document.location.href = links[i].getElementsByTagName('a')[0].getAttribute('href') +
+                    '#data=' + encodeURIComponent(JSON.stringify(fml.data));
+                } else {
+                  fml.handlers.prompt("\u274C boxofficepro hasn\'t posted yet.\n\n");
+                }
                 break;
               }
             }
@@ -189,11 +198,11 @@ javascript: (function () {
                 today = (new Date()).setHours(0,0,0,0);
               
               if (date.getDay() == 4) {
-                if (today - date < 7 * 24 * 60 * 60 * 1000) {
+                if (today - date < fml.staleThreshold * 24 * 60 * 60 * 1000) {
                   document.location.href = rows[i].getElementsByTagName('a')[0].getAttribute('href') +
                     '#data=' + encodeURIComponent(JSON.stringify(fml.data));
                 } else {
-                  fml.handlers.prompt("\u274C Boxofficemojo hasn\'t posted yet.\n\n");
+                  fml.handlers.prompt("\u274C boxofficemojo hasn\'t posted yet.\n\n");
                 }
                 break;
               }
@@ -212,16 +221,23 @@ javascript: (function () {
           }
         },
         'www.boxofficereport.com': function () {
-          var options = Array.from(document.querySelectorAll('h4>table.inlineTable:nth-child(1) tr')).slice(1);
-          fml.data.bor = {};
-          for (var key in options) {
-            var row = options[key],
-              movie = row.getElementsByTagName('td')[1].innerHTML.replace(/\(.*?\)/g,''),
-              projected = parseFloat(row.getElementsByTagName('td')[2].innerHTML.replace(/[^\d\.]/g, ''))*1000000;
-            movie = movie.replace(/\W/g, '').toLowerCase();
-            fml.data.bor[movie] = projected;
+          var dateStr = document.querySelectorAll('h5')[0].innerHTML.replace(/Published on /mi, '').replace(/ at(.|\r|\n)*/i, ''),
+            date = new Date(dateStr),
+            today = (new Date()).setHours(0, 0, 0, 0);
+          if (today - date < fml.staleThreshold * 24 * 60 * 60 * 1000) {
+            var options = Array.from(document.querySelectorAll('h4>table.inlineTable:nth-child(1) tr')).slice(1);
+            fml.data.bor = {};
+            for (var key in options) {
+              var row = options[key],
+                movie = row.getElementsByTagName('td')[1].innerHTML.replace(/\(.*?\)/g, ''),
+                projected = parseFloat(row.getElementsByTagName('td')[2].innerHTML.replace(/[^\d\.]/g, '')) * 1000000;
+              movie = movie.replace(/\W/g, '').toLowerCase();
+              fml.data.bor[movie] = projected;
+            }
+            fml.handlers.prompt("\u2714 Grabbed data from boxofficereport!\n\n");
+          } else {
+            fml.handlers.prompt("\u274C boxofficereport hasn\'t posted yet.\n\n");
           }
-          fml.handlers.prompt("\u2714 Grabbed data from boxofficereport!\n\n");
         }
       },
       flattenData: function (projectedData) {
