@@ -63,11 +63,15 @@ javascript: (function () {
           styles.innerHTML += '.fml-calc .output>div { float: left; clear: left; opacity: .2; transition: .3s all ease-in-out } ';
           styles.innerHTML += '.fml-calc .output>div:first-child, .fml-calc .output>div:hover { opacity: 1 } ';
           styles.innerHTML += '.fml-calc .output>div:first-child { margin-bottom: 2em; border-bottom: 1px solid #9a1c57; } ';
-          styles.innerHTML += '.fml-calc .output img { box-shadow: 0 0 20px #9a1c57; width: 86px; float: left; margin-bottom: .2em; box-sizing: content-box; border-radius: 4px } ';
-          styles.innerHTML += '.fml-calc .output img.bestvalue { box-shadow: 0 0 20px #38ff38; border-bottom: 5px solid #38ff38; } ';
-          styles.innerHTML += '.fml-calc .output img + img { margin-left: .5em; } ';
-          styles.innerHTML += '@media (max-width: 1029px) { .fml-calc .output img:nth-child(5) {clear: left; margin-left: 0; }} ';
-          styles.innerHTML += '.fml-calc .output>div+div img { box-shadow: none !important; } ';
+          styles.innerHTML += '.fml-calc .output .img { box-shadow: 0 0 20px #9a1c57; float: left; margin-bottom: .2em; box-sizing: content-box; border-radius: 4px; position: relative } ';
+          styles.innerHTML += '.fml-calc .output .img img { width: 86px; float: left; } ';
+          styles.innerHTML += '.fml-calc .output .img:hover::before, .fml-calc .output .img:focus::before, .fml-calc .output .img:active::before, '+
+            '.fml-calc .output .img:hover::after, .fml-calc .output .img:focus::after, .fml-calc .output .img:active::after { content: attr(data-title); position: absolute; top: -5em; left: 50%; font-size: 12px; background: #222; padding: .5em; white-space: nowrap; transform: translate(-50%,0); } ';
+          styles.innerHTML += '.fml-calc .output .img:hover::after, .fml-calc .output .img:focus::after, .fml-calc .output .img:active::after { content: attr(data-stats); top: -3em; } '; 
+          styles.innerHTML += '.fml-calc .output .img.bestvalue { box-shadow: 0 0 20px #38ff38; border-bottom: 5px solid #38ff38; } ';
+          styles.innerHTML += '.fml-calc .output .img + .img { margin-left: .5em; } ';
+          styles.innerHTML += '@media (max-width: 1029px) { .fml-calc .output .img:nth-child(5) {clear: left; margin-left: 0; }} ';
+          styles.innerHTML += '.fml-calc .output>div+div .img { box-shadow: none !important; } ';
           styles.innerHTML += '.fml-calc .output h2 { float: left; clear: left } ';
           styles.innerHTML += '.fml-calc .output span { float: right; font-size: 1.6em; font-weight: bold; margin-bottom: 0.4em; } ';
           styles.innerHTML += '.fml-calc .calc-form { float: left; color: #fff; margin-top: -18px; } ';
@@ -117,11 +121,10 @@ javascript: (function () {
           for (var i = 0; i < lineup.length; i++) {
             if (lineup[i].title != 'info') {
               variation.innerHTML +=
-                '<img ' + (lineup[i].bestValue ? 'class="bestvalue" ' : '') +
-                'src="' + lineup[i].img + '" title="' + lineup[i].title + ' ' + lineup[i].day + ' | ' +
-                Number(lineup[i].dollarperbux).toLocaleString('en-US', { style: 'currency', currency: 'USD' }).slice(0, -3) + '/bux | ' +
+                '<span class="img ' + (lineup[i].bestValue ? 'bestvalue' : '') + '" data-title="' + lineup[i].title + ' ' + lineup[i].day + '" ' +
+                'data-stats="' + Number(lineup[i].dollarperbux).toLocaleString('en-US', { style: 'currency', currency: 'USD' }).slice(0, -3) + '/bux | ' +
                 Number(lineup[i].projected).toLocaleString('en-US', { style: 'currency', currency: 'USD' }).slice(0, -3) +
-                '"/>';
+                '"><img src="' + lineup[i].img + '"/></span>';
             } else {
               variation.innerHTML +=
                 '<h2>' + lineup[i].bux + ' bux remaining</h2>' +
