@@ -55,14 +55,18 @@ javascript: (function () {
             return false;
           }, true);
           calc.appendChild(form);
+          
           var styles = document.createElement('style');
           styles.innerHTML += '.cineplex .is-locked-message-wrap, .cineplex.is-locked .is-locked-message { max-height: 670px } ';
           styles.innerHTML += '.fml-calc { padding: 1em 0; margin-top: 3em } ';
           styles.innerHTML += '.fml-calc::before, .fml-calc::after { content: ""; display: block; clear: both } ';
-          styles.innerHTML += '.fml-calc .output { float: left; color: #ddd; margin-bottom: 1em; margin-right: 1em; padding-right: 1em; border-right: 1px solid #9a1b57; } ';
+          styles.innerHTML += '.fml-calc .output { float: left; color: #ddd; margin-bottom: 1em; margin-right: 1em; margin-top: -10px; padding-top: 10px; padding-right: 1em; border-right: 1px solid #9a1b57; } ';
           styles.innerHTML += '.fml-calc .output>div { float: left; clear: left; opacity: .2; transition: .3s all ease-in-out } ';
-          styles.innerHTML += '.fml-calc .output>div:first-child, .fml-calc .output>div:hover { opacity: 1 } ';
-          styles.innerHTML += '.fml-calc .output>div:first-child { margin-bottom: 2em; border-bottom: 1px solid #9a1c57; } ';
+          styles.innerHTML += '.fml-calc .output>div:first-of-type, .fml-calc .output>div:hover { opacity: 1 } ';
+          styles.innerHTML += '.fml-calc .output>div:first-of-type { margin-bottom: 2em; border-bottom: 1px solid #9a1c57; } ';
+          styles.innerHTML += '.fml-calc .output>p { float: left; width: 50%; } ';
+          styles.innerHTML += '.fml-calc .output svg { position: relative; left: 7.5%; top: -15px; } ';
+          styles.innerHTML += '.fml-calc .output>div+p { clear: left; } ';
           styles.innerHTML += '.fml-calc .output .img { box-shadow: 0 0 20px #9a1c57; float: left; margin-bottom: .2em; box-sizing: content-box; border-radius: 4px; position: relative } ';
           styles.innerHTML += '.fml-calc .output .img img { width: 86px; float: left; } ';
           styles.innerHTML += '.fml-calc .output .img:hover::before, .fml-calc .output .img:focus::before, .fml-calc .output .img:active::before, '+
@@ -84,6 +88,15 @@ javascript: (function () {
           styles.innerHTML += '.fml-calc .calc-form>div { text-align: center; margin-bottom: 1em } ';
           styles.innerHTML += '.fml-calc .calc-form>button { border-radius: 4px; background: #38ff38; margin: 1.5em 0; font-size: 1em; width: 100% } ';
           document.querySelectorAll('head')[0].appendChild(styles);
+
+          var script = document.createElement('script');
+          script.onload = function () {
+            window.google = google;
+            window.google.charts.load('current', {'packages':['corechart']});
+            window.google.charts.setOnLoadCallback(fml.handlers.addCharts);
+          };
+          script.setAttribute('src', 'https://www.gstatic.com/charts/loader.js');
+          document.head.appendChild(script);
         }
         calcform = document.querySelectorAll('.fml-calc .calc-form')[0];
         calcform.innerHTML = '';
@@ -107,14 +120,56 @@ javascript: (function () {
         window.variations = [];
         fml.helpers.getVariation([], 1000);
 
+        document.querySelectorAll('.fml-calc .output')[0].innerHTML = '';
+
+        fml.handlers.placeLineups();
+        fml.handlers.addCharts();
+        
+        document.getElementsByTagName('html')[0].scrollTop =
+          document.querySelectorAll('.fml-calc')[0].getBoundingClientRect().y +
+          document.getElementsByTagName('html')[0].scrollTop - 100;
+      },
+      addCharts: function () {
+        if (typeof window.google === 'undefined') {
+          return false;
+        }
+        var performanceData = [['Movie','$/bux']],
+          performanceChart = document.createElement('p'),
+          projectedData = [['Movie','projected']],
+          projectedChart = document.createElement('p'),
+          options = { backgroundColor: 'transparent', titleTextStyle: { color: '#fff' }, hAxis: { textStyle: { color: '#fff' }, titleTextStyle: { color: '#fff' } }, vAxis: { textStyle: { color: '#fff' }, titleTextStyle: { color: '#fff' } }, legend: { position: 'none', textStyle: { color: '#fff' } } };
+
+        performanceChart.setAttribute('id', 'performancechart');
+        projectedChart.setAttribute('id', 'projectedchart');
+        document.querySelectorAll('.fml-calc .output')[0].insertBefore(performanceChart, document.querySelectorAll('.fml-calc .output')[0].childNodes[1]);
+        document.querySelectorAll('.fml-calc .output')[0].insertBefore(projectedChart, document.querySelectorAll('.fml-calc .output')[0].childNodes[1]);
+        
+        for (var key in fml.formdata) {
+          if (fml.formdata[key].title && fml.formdata[key].projected > 0) {
+            performanceData.push([
+              fml.formdata[key].title + ' ' + fml.formdata[key].day,
+              fml.formdata[key].dollarperbux
+            ]);
+            projectedData.push([
+              fml.formdata[key].title + ' ' + fml.formdata[key].day,
+              fml.formdata[key].projected
+            ]);
+          }
+        }
+        var data = window.google.visualization.arrayToDataTable(performanceData);
+        var chart = new window.google.visualization.ColumnChart(document.getElementById('performancechart'));
+        chart.draw(data, options);
+        
+        var data = window.google.visualization.arrayToDataTable(projectedData);
+        var chart = new window.google.visualization.ColumnChart(document.getElementById('projectedchart'));
+        chart.draw(data, options);
+      },
+      placeLineups: function () {
         var bestVariations = window.variations.slice().sort(function (a, b) {
           var aproj = a[a.length - 1].projected,
             bproj = b[b.length - 1].projected;
           return aproj > bproj ? -1 : (aproj < bproj ? 1 : 0);
         }).slice(0, 10);
-            
-
-        document.querySelectorAll('.fml-calc .output')[0].innerHTML = '';
         for (var l = 0; l < bestVariations.length; l++) {
           var lineup = bestVariations[l],
             variation = document.createElement('div');
@@ -122,20 +177,26 @@ javascript: (function () {
             if (lineup[i].title != 'info') {
               variation.innerHTML +=
                 '<span class="img ' + (lineup[i].bestValue ? 'bestvalue' : '') + '" data-title="' + lineup[i].title + ' ' + lineup[i].day + '" ' +
-                'data-stats="' + Number(lineup[i].dollarperbux).toLocaleString('en-US', { style: 'currency', currency: 'USD' }).slice(0, -3) + '/bux | ' +
-                Number(lineup[i].projected).toLocaleString('en-US', { style: 'currency', currency: 'USD' }).slice(0, -3) +
+                'data-stats="' + Number(lineup[i].dollarperbux).toLocaleString('en-US', {
+                  style: 'currency',
+                  currency: 'USD'
+                }).slice(0, -3) + '/bux | ' +
+                Number(lineup[i].projected).toLocaleString('en-US', {
+                  style: 'currency',
+                  currency: 'USD'
+                }).slice(0, -3) +
                 '"><img src="' + lineup[i].img + '"/></span>';
             } else {
               variation.innerHTML +=
                 '<h2>' + lineup[i].bux + ' bux remaining</h2>' +
-                '<span>' + Number(lineup[i].projected).toLocaleString('en-US', { style: 'currency', currency: 'USD' }).slice(0, -3) + '</span>';
+                '<span>' + Number(lineup[i].projected).toLocaleString('en-US', {
+                  style: 'currency',
+                  currency: 'USD'
+                }).slice(0, -3) + '</span>';
             }
           }
           document.querySelectorAll('.fml-calc .output')[0].appendChild(variation);
         }
-        document.getElementsByTagName('html')[0].scrollTop =
-          document.querySelectorAll('.fml-calc')[0].getBoundingClientRect().y +
-          document.getElementsByTagName('html')[0].scrollTop - 100;
       },
       modifyProjected: function (element, value) {
         var input = element.parentElement.getElementsByTagName('input')[0],
@@ -156,7 +217,7 @@ javascript: (function () {
       },
       path: {
         'fantasymovieleague.com': function () {
-          fml.formdata = fml.helpers.parseFMLData(fml.helpers.flattenData(fml.data));
+          window.fml.formdata = fml.helpers.parseFMLData(fml.helpers.flattenData(fml.data));
           fml.handlers.setupDom();
           fml.handlers.recalculate();
         },
