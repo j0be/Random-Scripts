@@ -71,7 +71,8 @@ javascript: (function () {
           styles.innerHTML += '.fml-calc .output .img img { width: 86px; float: left; } ';
           styles.innerHTML += '.fml-calc .output .img:hover::before, .fml-calc .output .img:focus::before, .fml-calc .output .img:active::before, '+
             '.fml-calc .output .img:hover::after, .fml-calc .output .img:focus::after, .fml-calc .output .img:active::after { content: attr(data-title); position: absolute; top: -5em; left: 50%; font-size: 12px; background: #222; padding: .5em; white-space: nowrap; transform: translate(-50%,0); } ';
-          styles.innerHTML += '.fml-calc .output .img:hover::after, .fml-calc .output .img:focus::after, .fml-calc .output .img:active::after { content: attr(data-stats); top: -3em; } '; 
+          styles.innerHTML += '.fml-calc .output .img:hover::after, .fml-calc .output .img:focus::after, .fml-calc .output .img:active::after { content: attr(data-stats); top: -3em; } ';
+          styles.innerHTML += '.fml-calc .output .img.bestvalue:hover::before, .fml-calc .output .img.bestvalue:focus::before, .fml-calc .output .img.bestvalue:active::before { content: attr(data-title) " (Best Performer)";} ';
           styles.innerHTML += '.fml-calc .output .img.bestvalue { box-shadow: 0 0 20px #38ff38; border-bottom: 5px solid #38ff38; } ';
           styles.innerHTML += '.fml-calc .output .img + .img { margin-left: .5em; } ';
           styles.innerHTML += '@media (max-width: 1029px) { .fml-calc .output .img:nth-child(5) {clear: left; margin-left: 0; }} ';
