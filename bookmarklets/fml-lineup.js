@@ -247,7 +247,7 @@ javascript: (function () {
             fml.data.bop = {};
             for (var key in rows) {
               var row = rows[key];
-              fml.data.bop[row.getElementsByTagName('td')[nameCol].innerHTML.replace(/\W/g, '').toLowerCase()] =
+              fml.data.bop[fml.helpers.cleanTitle(row.getElementsByTagName('td')[nameCol].innerHTML)] =
                 parseFloat(row.getElementsByTagName('td')[projectedCol].innerHTML.replace(/\D/g, ''));
             }
             fml.handlers.prompt("\u2714 Grabbed data from boxofficepro!\n\n");
@@ -278,7 +278,7 @@ javascript: (function () {
 
             fml.data.bom = {};
             for (var i = 0; i < movies.length; i++) {
-              fml.data.bom[movies[i].innerHTML.replace(/\W/g, '').toLowerCase()] =
+              fml.data.bom[fml.helpers.cleanTitle(movies[i].innerHTML)] =
                 parseFloat(vals[i].innerHTML.replace(/.*? - \$/, '').replace(/[^\d\.]/g, '')) * 1000000;
             }
             fml.handlers.prompt("\u2714 Grabbed data from boxofficemojo!\n\n");
@@ -293,9 +293,9 @@ javascript: (function () {
             fml.data.bor = {};
             for (var key in options) {
               var row = options[key],
-                movie = row.getElementsByTagName('td')[1].innerHTML.replace(/\(.*?\)/g, ''),
+                movie = row.getElementsByTagName('td')[1].innerHTML.replace(/<.*?>/g,'').replace(/\(.*?\)/g, ''),
                 projected = parseFloat(row.getElementsByTagName('td')[2].innerHTML.replace(/[^\d\.]/g, '')) * 1000000;
-              movie = movie.replace(/\W/g, '').toLowerCase();
+              movie = fml.helpers.cleanTitle(movie);
               fml.data.bor[movie] = projected;
             }
             fml.handlers.prompt("\u2714 Grabbed data from boxofficereport!\n\n");
@@ -319,6 +319,9 @@ javascript: (function () {
         }
         return returnArr;
       },
+      cleanTitle: function (titleStr) {
+        return titleStr.replace(/\bthe\b/i, '').replace(/\W/g, '').toLowerCase();
+      },
       parseFMLData: function (projectedData) {
         var movies = document.querySelectorAll('ul.cineplex__bd-movies .cineplex__bd-movie-item .outer-wrap'),
           titles = document.querySelectorAll('ul.cineplex__bd-movies .cineplex__bd-movie-item .title'),
@@ -337,7 +340,7 @@ javascript: (function () {
           if (day) {
             title = title.replace(/^\w{3} - /, '').replace(/ - \w{3} ONLY$/, '');
           }
-          var code = title.replace(/\W/g, '').toLowerCase();
+          var code = fml.helpers.cleanTitle(title);
 
           var projected = projectedData[code],
             hasProjection = !!projected;
