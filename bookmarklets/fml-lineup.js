@@ -33,7 +33,7 @@ javascript: (function () {
         if (fml.targets[target]) {
           document.location.href = fml.targets[target] +
             (JSON.stringify(fml.data) != '{}' ?
-              '#data=' + encodeURIComponent(JSON.stringify(fml.data)) :
+              '?data=' + encodeURIComponent(JSON.stringify(fml.data)) :
               '');
         } else {
           alert('That isn\'t one of the options');
@@ -208,8 +208,8 @@ javascript: (function () {
     helpers: {
       detectPath: function () {
         if (fml.helpers.path[document.location.hostname]) {
-          fml.data = !!document.location.href.match(/\#data=/) ?
-            JSON.parse(decodeURIComponent(document.location.href.replace(/.*?#data=/, ''))) :
+          fml.data = !!document.location.href.match(/data=/) ?
+            JSON.parse(decodeURIComponent(document.location.href.replace(/.*?data=/, ''))) :
             {};
           fml.helpers.path[document.location.hostname]();
         } else {
