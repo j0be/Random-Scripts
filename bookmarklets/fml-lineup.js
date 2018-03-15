@@ -28,7 +28,9 @@ javascript: (function () {
         if (optionsstr.split('\n').length > 2) {
           fml.handlers.navigate(prompt(str + optionsstr, 'fml'));
         } else {
-          alert(ostr);
+          if (forceAlert) {
+            alert(ostr);
+          }
           fml.handlers.navigate('fml');
         }
       },
