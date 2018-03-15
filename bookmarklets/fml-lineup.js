@@ -4,18 +4,20 @@ javascript: (function () {
     formdata: {/* finessed a bit */},
     targets: {
       'fml':'http://fantasymovieleague.com',
-      'bop':'http://pro.boxoffice.com/category/boxoffice-forecasts/',
-      'bom':'http://www.boxofficemojo.com/news/',
-      'bor':'http://www.boxofficereport.com/predictions/predictions.html'
+      'mojo':'http://www.boxofficemojo.com/news/',
+      'pro':'http://pro.boxoffice.com/category/boxoffice-forecasts/',
+      'rep':'http://www.boxofficereport.com/predictions/predictions.html',
+      'bop': 'http://www.boxofficeprophets.com/',
     },
     weekendWeight: {
       '3': { 'FRI': .4184, 'SAT': .3309, 'SUN': .2507 },
       '4': { 'FRI': .311, 'SAT': .2793, 'SUN': .2798, 'MON': .1298 }
     },
-    staleThreshold: 4,
+    staleThreshold: 5,
     handlers: {
-      prompt: function (str) {
-        str = (str ? str : '') + 'Where would you like to go?';
+      prompt: function (ostr) {
+        var forceAlert = ostr ? true : false;
+        str = (ostr ? ostr : '') + 'Where would you like to go?';
         var optionsstr = '';
         for (var key in fml.targets) { if (fml.targets.hasOwnProperty(key)) {
           host = (fml.targets[key]).replace(/https?:\/\//, '').replace(/\.com.*/, '.com');
@@ -23,17 +25,19 @@ javascript: (function () {
             optionsstr += '\n\u2022 ' + key + ': ' + host;
           }
         }}
-        if (optionsstr != '') {
+        if (optionsstr.split('\n').length > 2) {
           fml.handlers.navigate(prompt(str + optionsstr, 'fml'));
         } else {
+          alert(ostr);
           fml.handlers.navigate('fml');
         }
       },
       navigate: function (target) {
         if (fml.targets[target]) {
+          var separator = target === 'fml' ? '?' : '#';
           document.location.href = fml.targets[target] +
             (JSON.stringify(fml.data) != '{}' ?
-              '?data=' + encodeURIComponent(JSON.stringify(fml.data)) :
+              separator + 'data=' + encodeURIComponent(JSON.stringify(fml.data)):
               '');
         } else {
           alert('That isn\'t one of the options');
@@ -55,10 +59,12 @@ javascript: (function () {
             return false;
           }, true);
           calc.appendChild(form);
-          
+
           var styles = document.createElement('style');
           styles.innerHTML += '.cineplex .is-locked-message-wrap, .cineplex.is-locked .is-locked-message { max-height: 670px } ';
           styles.innerHTML += '.fml-calc { padding: 1em 0; margin-top: 3em } ';
+          styles.innerHTML += '.fml-calc a { cursor: pointer; color: #09f; font-size: .8em; display: block; text-align: center; } ';
+          styles.innerHTML += '.fml-calc a:hover { text-decoration: underline; } ';
           styles.innerHTML += '.fml-calc::before, .fml-calc::after { content: ""; display: block; clear: both } ';
           styles.innerHTML += '.fml-calc .output { float: left; color: #ddd; margin-bottom: 1em; margin-right: 1em; margin-top: -10px; padding-top: 10px; padding-right: 1em; border-right: 1px solid #9a1b57; } ';
           styles.innerHTML += '.fml-calc .output>div { float: left; clear: left; opacity: .2; transition: .3s all ease-in-out } ';
@@ -67,8 +73,8 @@ javascript: (function () {
           styles.innerHTML += '.fml-calc .output>p { float: left; width: 50%; } ';
           styles.innerHTML += '.fml-calc .output svg { position: relative; left: 7.5%; top: -15px; } ';
           styles.innerHTML += '.fml-calc .output>div+p { clear: left; } ';
-          styles.innerHTML += '.fml-calc .output .img { box-shadow: 0 0 20px #9a1c57; float: left; margin-bottom: .2em; box-sizing: content-box; border-radius: 4px; position: relative } ';
-          styles.innerHTML += '.fml-calc .output .img img { width: 86px; float: left; } ';
+          styles.innerHTML += '.fml-calc .output .img { float: left; margin-bottom: .2em; box-sizing: content-box; border-radius: 4px; position: relative; width: 86px; min-height: 48px } ';
+          styles.innerHTML += '.fml-calc .output .img img { width: 86px; float: left; height: 48px; object-fit: cover; } ';
           styles.innerHTML += '.fml-calc .output .img:hover::before, .fml-calc .output .img:focus::before, .fml-calc .output .img:active::before, '+
             '.fml-calc .output .img:hover::after, .fml-calc .output .img:focus::after, .fml-calc .output .img:active::after { content: attr(data-title); position: absolute; top: -5em; left: 50%; font-size: 12px; background: #222; padding: .5em; white-space: nowrap; transform: translate(-50%,0); } ';
           styles.innerHTML += '.fml-calc .output .img:hover::after, .fml-calc .output .img:focus::after, .fml-calc .output .img:active::after { content: attr(data-stats); top: -3em; } ';
@@ -76,7 +82,8 @@ javascript: (function () {
           styles.innerHTML += '.fml-calc .output .img.bestvalue { box-shadow: 0 0 20px #38ff38; border-bottom: 5px solid #38ff38; } ';
           styles.innerHTML += '.fml-calc .output .img + .img { margin-left: .5em; } ';
           styles.innerHTML += '@media (max-width: 1029px) { .fml-calc .output .img:nth-child(5) {clear: left; margin-left: 0; }} ';
-          styles.innerHTML += '.fml-calc .output>div+div .img { box-shadow: none !important; } ';
+          styles.innerHTML += '.fml-calc .output>p~div .img { box-shadow: none !important; } ';
+          styles.innerHTML += '.fml-calc .output .img.defaultProjection { box-shadow: 0 0 20px #9a1c57 !important; } ';
           styles.innerHTML += '.fml-calc .output h2 { float: left; clear: left } ';
           styles.innerHTML += '.fml-calc .output span { float: right; font-size: 1.6em; font-weight: bold; margin-bottom: 0.4em; } ';
           styles.innerHTML += '.fml-calc .calc-form { float: left; color: #fff; margin-top: -18px; } ';
@@ -88,7 +95,7 @@ javascript: (function () {
           styles.innerHTML += '.fml-calc .calc-form button { font-family: inherit; font-weight: bold; cursor: pointer; width: auto } ';
           styles.innerHTML += '.fml-calc .calc-form>div { text-align: center; margin-bottom: 1em } ';
           styles.innerHTML += '.fml-calc .calc-form>button { border-radius: 4px; background: #38ff38; margin: 1.5em 0; font-size: 1em; width: 100% } ';
-          document.querySelectorAll('head')[0].appendChild(styles);
+          document.head.appendChild(styles);
 
           var script = document.createElement('script');
           script.onload = function () {
@@ -115,6 +122,33 @@ javascript: (function () {
           }
         }
         calcform.innerHTML += '<button onclick="fml.handlers.recalculate()">Recalculate</button>';
+        calcform.innerHTML += '<a onclick="fml.handlers.copy()">Copy Projections</a>';
+      },
+      copy: function () {
+        var copyText = document.createElement('textarea'),
+          str = "My projections for this weekend:\r\n\r\nMovie|Projected\r\n:--|--:\r\n",
+          projected = 0;
+        document.querySelectorAll('.cineplex__bd')[0].appendChild(copyText);
+        var top10 = fml.formdata.sort(function(a,b) {
+          aprojected = a.projected - (a.bestValue ? 2000000 : 0);
+          bprojected = b.projected - (b.bestValue ? 2000000 : 0);
+          return aprojected < bprojected ? 1:
+            (aprojected > bprojected ? -1 : 0);
+        });
+
+        for (var key in top10.slice(0, 10)) {
+          projected = top10[key].projected - (top10[key].bestValue ? 2000000 : 0);
+          projected = Math.round(projected / 100000)/10;
+          if (projected > 0) {
+            str += top10[key].title + '|';
+            str += '$'+ projected.toFixed(1) + "M\r\n";
+          }
+        }
+
+        copyText.value = str;
+        copyText.select();
+        document.execCommand("Copy");
+        copyText.parentNode.removeChild(copyText);
       },
       recalculate: function () {
         fml.helpers.reparseVariables();
@@ -125,7 +159,6 @@ javascript: (function () {
 
         fml.handlers.placeLineups();
         fml.handlers.addCharts();
-        
         document.getElementsByTagName('html')[0].scrollTop =
           document.querySelectorAll('.fml-calc')[0].getBoundingClientRect().y +
           document.getElementsByTagName('html')[0].scrollTop - 100;
@@ -144,7 +177,7 @@ javascript: (function () {
         projectedChart.setAttribute('id', 'projectedchart');
         document.querySelectorAll('.fml-calc .output')[0].insertBefore(performanceChart, document.querySelectorAll('.fml-calc .output')[0].childNodes[1]);
         document.querySelectorAll('.fml-calc .output')[0].insertBefore(projectedChart, document.querySelectorAll('.fml-calc .output')[0].childNodes[1]);
-        
+
         for (var key in fml.formdata) {
           if (fml.formdata[key].title && fml.formdata[key].projected > 0) {
             performanceData.push([
@@ -160,7 +193,7 @@ javascript: (function () {
         var data = window.google.visualization.arrayToDataTable(performanceData);
         var chart = new window.google.visualization.ColumnChart(document.getElementById('performancechart'));
         chart.draw(data, options);
-        
+
         var data = window.google.visualization.arrayToDataTable(projectedData);
         var chart = new window.google.visualization.ColumnChart(document.getElementById('projectedchart'));
         chart.draw(data, options);
@@ -170,14 +203,14 @@ javascript: (function () {
           var aproj = a[a.length - 1].projected,
             bproj = b[b.length - 1].projected;
           return aproj > bproj ? -1 : (aproj < bproj ? 1 : 0);
-        }).slice(0, 10);
+        }).slice(0, 7);
         for (var l = 0; l < bestVariations.length; l++) {
           var lineup = bestVariations[l],
             variation = document.createElement('div');
           for (var i = 0; i < lineup.length; i++) {
             if (lineup[i].title != 'info') {
               variation.innerHTML +=
-                '<span class="img ' + (lineup[i].bestValue ? 'bestvalue' : '') + '" data-title="' + lineup[i].title + ' ' + lineup[i].day + '" ' +
+                '<span class="img' + (lineup[i].bestValue ? ' bestvalue' : '') + (!lineup[i].hasProjection ? ' defaultProjection' : '') + '" data-title="' + lineup[i].title + ' ' + lineup[i].day + '" ' +
                 'data-stats="' + Number(lineup[i].dollarperbux).toLocaleString('en-US', {
                   style: 'currency',
                   currency: 'USD'
@@ -208,8 +241,8 @@ javascript: (function () {
     helpers: {
       detectPath: function () {
         if (fml.helpers.path[document.location.hostname]) {
-          fml.data = !!document.location.href.match(/data=/) ?
-            JSON.parse(decodeURIComponent(document.location.href.replace(/.*?data=/, ''))) :
+          fml.data = !!document.location.href.match(/[\#\?]data=/) ?
+            JSON.parse(decodeURIComponent(document.location.href.replace(/.*?[\#\?]data=/, ''))):
             {};
           fml.helpers.path[document.location.hostname]();
         } else {
@@ -245,13 +278,32 @@ javascript: (function () {
               rows = Array.from(post.getElementsByTagName('tbody')[0].getElementsByTagName('tr')).slice(1),
               nameCol = 0,
               projectedCol = 2;
-            fml.data.bop = {};
+            fml.data.pro = {};
             for (var key in rows) {
               var row = rows[key];
-              fml.data.bop[fml.helpers.cleanTitle(row.getElementsByTagName('td')[nameCol].innerHTML)] =
+              fml.data.pro[fml.helpers.cleanTitle(row.getElementsByTagName('td')[nameCol].innerHTML)] =
                 parseFloat(row.getElementsByTagName('td')[projectedCol].innerHTML.replace(/\D/g, ''));
             }
             fml.handlers.prompt("\u2714 Grabbed data from boxofficepro!\n\n");
+          }
+        },
+        'www.boxofficereport.com': function () {
+          var dateStr = document.querySelectorAll('h5')[0].innerHTML.replace(/Published on /mi, '').replace(/ at(.|\r|\n)*/i, ''),
+            date = new Date(dateStr),
+            today = (new Date()).setHours(0, 0, 0, 0);
+          if (today - date < fml.staleThreshold * 24 * 60 * 60 * 1000) {
+            var options = Array.from(document.querySelectorAll('h4>table.inlineTable:nth-child(1) tr')).slice(1);
+            fml.data.rep = {};
+            for (var key in options) {
+              var row = options[key],
+                movie = row.getElementsByTagName('td')[1].innerHTML.replace(/<.*?>/g, '').replace(/\(.*?\)/g, ''),
+                projected = parseFloat(row.getElementsByTagName('td')[2].innerHTML.replace(/[^\d\.]/g, '')) * 1000000;
+              movie = fml.helpers.cleanTitle(movie);
+              fml.data.rep[movie] = projected;
+            }
+            fml.handlers.prompt("\u2714 Grabbed data from boxofficereport!\n\n");
+          } else {
+            fml.handlers.prompt("\u274C boxofficereport hasn\'t posted yet.\n\n");
           }
         },
         'www.boxofficemojo.com': function () {
@@ -261,7 +313,7 @@ javascript: (function () {
               var dateStr = rows[i].querySelectorAll('td>font>b')[0],
                 date = new Date(dateStr.innerHTML),
                 today = (new Date()).setHours(0,0,0,0);
-              
+
               if (date.getDay() == 4) {
                 if (today - date < fml.staleThreshold * 24 * 60 * 60 * 1000) {
                   document.location.href = rows[i].getElementsByTagName('a')[0].getAttribute('href') +
@@ -277,31 +329,40 @@ javascript: (function () {
               movies = forecasts[forecasts.length - 1].getElementsByTagName('b'),
               vals = forecasts[forecasts.length - 1].getElementsByTagName('li');
 
-            fml.data.bom = {};
+            fml.data.mojo = {};
             for (var i = 0; i < movies.length; i++) {
-              fml.data.bom[fml.helpers.cleanTitle(movies[i].innerHTML)] =
+              fml.data.mojo[fml.helpers.cleanTitle(movies[i].innerHTML)] =
                 parseFloat(vals[i].innerHTML.replace(/.*? - \$/, '').replace(/[^\d\.]/g, '')) * 1000000;
             }
             fml.handlers.prompt("\u2714 Grabbed data from boxofficemojo!\n\n");
           }
         },
-        'www.boxofficereport.com': function () {
-          var dateStr = document.querySelectorAll('h5')[0].innerHTML.replace(/Published on /mi, '').replace(/ at(.|\r|\n)*/i, ''),
-            date = new Date(dateStr),
-            today = (new Date()).setHours(0, 0, 0, 0);
-          if (today - date < fml.staleThreshold * 24 * 60 * 60 * 1000) {
-            var options = Array.from(document.querySelectorAll('h4>table.inlineTable:nth-child(1) tr')).slice(1);
-            fml.data.bor = {};
-            for (var key in options) {
-              var row = options[key],
-                movie = row.getElementsByTagName('td')[1].innerHTML.replace(/<.*?>/g,'').replace(/\(.*?\)/g, ''),
-                projected = parseFloat(row.getElementsByTagName('td')[2].innerHTML.replace(/[^\d\.]/g, '')) * 1000000;
-              movie = fml.helpers.cleanTitle(movie);
-              fml.data.bor[movie] = projected;
+        'www.boxofficeprophets.com': function () {
+          if (document.location.href.match('column')) {
+            var tables = document.querySelectorAll('#EchoTopic table');
+            var projections = tables[tables.length - 1].querySelectorAll('tr[bgcolor*="eee"]');
+            fml.data.bop = {};
+            for (var i = 0; i < projections.length; i++) {
+              fml.data.bop[fml.helpers.cleanTitle(projections[i].querySelectorAll('td')[1].textContent)] =
+                parseFloat(projections[i].querySelectorAll('td')[4].textContent.replace(/[^\d\.]/g, '')) * 1000000;
             }
-            fml.handlers.prompt("\u2714 Grabbed data from boxofficereport!\n\n");
+            fml.handlers.prompt("\u2714 Grabbed data from boxofficeprophets!\n\n");
           } else {
-            fml.handlers.prompt("\u274C boxofficereport hasn\'t posted yet.\n\n");
+            var headings = document.querySelectorAll('.fpcelltitle strong');
+            for (var key in headings) {
+              if (headings[key].innerHTML.trim().toLowerCase() === 'weekend forecast') {
+                var dateStr = headings[key].closest('table').querySelectorAll('font[color="black"] strong').textContent,
+                  date = new Date(dateStr),
+                  today = (new Date()).setHours(0, 0, 0, 0);
+                if (today - date < fml.staleThreshold * 24 * 60 * 60 * 1000) {
+                  document.location.href = headings[key].closest('a').getAttribute('href') +
+                    '#data=' + encodeURIComponent(JSON.stringify(fml.data));
+                  break;
+                } else {
+                  fml.handlers.prompt("\u274C boxofficeprophets hasn\'t posted yet.\n\n");
+                }
+              }
+            }
           }
         }
       },
@@ -321,7 +382,7 @@ javascript: (function () {
         return returnArr;
       },
       cleanTitle: function (titleStr) {
-        return titleStr.replace(/\bthe\b/i, '').replace(/\W/g, '').toLowerCase();
+        return titleStr.replace(/\b(a|an|the)\b/i, '').replace(/\W/g, '').toLowerCase();
       },
       parseFMLData: function (projectedData) {
         var movies = document.querySelectorAll('ul.cineplex__bd-movies .cineplex__bd-movie-item .outer-wrap'),
@@ -346,7 +407,7 @@ javascript: (function () {
           var projected = projectedData[code],
             hasProjection = !!projected;
           if (!hasProjection) {
-            projected = cost * 75000;
+            projected = cost * 50000;
             movies[i].setAttribute('style', 'border: 1px solid #f00');
           }
 
