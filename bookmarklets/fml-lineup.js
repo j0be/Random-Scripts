@@ -212,37 +212,17 @@ javascript: (function () {
           ],
           performanceChart = document.createElement('p'),
           projectedData = [
-            ['Movie', 'projected']
+            ['Movie', 'min', 'max', 'projected']
           ],
           projectedChart = document.createElement('p'),
-          options = {
-            backgroundColor: 'transparent',
-            titleTextStyle: {
-              color: '#fff'
-            },
-            hAxis: {
-              textStyle: {
-                color: '#fff'
-              },
-              titleTextStyle: {
-                color: '#fff'
-              }
-            },
-            vAxis: {
-              textStyle: {
-                color: '#fff'
-              },
-              titleTextStyle: {
-                color: '#fff'
-              }
-            },
-            legend: {
-              position: 'none',
-              textStyle: {
-                color: '#fff'
-              }
-            }
-          };
+          options = { title: 'Dollars per FML bux', backgroundColor: 'transparent', titleTextStyle: { color: '#fff' }, hAxis: { textStyle: { color: '#fff' }, titleTextStyle: { color: '#fff' } }, vAxis: { textStyle: { color: '#fff' }, titleTextStyle: { color: '#fff' } }, legend: { position: 'none', textStyle: { color: '#fff' } } };
+
+        var performanceOptions = JSON.parse(JSON.stringify(options)),
+          projectedOptions = JSON.parse(JSON.stringify(options));
+
+        projectedOptions.title = 'Weekend Projections';
+        projectedOptions.seriesType = 'bars';
+        projectedOptions.series = { 2: { type: 'line' } };
 
         performanceChart.setAttribute('id', 'performancechart');
         projectedChart.setAttribute('id', 'projectedchart');
@@ -251,23 +231,36 @@ javascript: (function () {
 
         for (var key in fml.formdata) {
           if (fml.formdata[key].title && fml.formdata[key].projected > 0) {
+            var min = 5000000000, max = 0;
+            for (datakey in fml.data) {
+              for (innerkey in fml.data[datakey]) {
+                console.log(fml.formdata[key].code, innerkey);
+                if (fml.formdata[key].code == innerkey) {
+                  min = Math.min(min, fml.data[datakey][innerkey]);
+                  max = Math.max(max, fml.data[datakey][innerkey]);
+                }
+              }
+            }
+            min = min === 5000000000 ? 0 : min;
+            projectedData.push([
+              fml.formdata[key].title + ' ' + fml.formdata[key].day,
+              min,
+              max,
+              fml.formdata[key].projected
+            ]);
             performanceData.push([
               fml.formdata[key].title + ' ' + fml.formdata[key].day,
               fml.formdata[key].dollarperbux
             ]);
-            projectedData.push([
-              fml.formdata[key].title + ' ' + fml.formdata[key].day,
-              fml.formdata[key].projected
-            ]);
           }
         }
+        var data = window.google.visualization.arrayToDataTable(projectedData);
+        var chart = new window.google.visualization.ComboChart(document.getElementById('projectedchart'));
+        chart.draw(data, projectedOptions);
+
         var data = window.google.visualization.arrayToDataTable(performanceData);
         var chart = new window.google.visualization.ColumnChart(document.getElementById('performancechart'));
-        chart.draw(data, options);
-
-        var data = window.google.visualization.arrayToDataTable(projectedData);
-        var chart = new window.google.visualization.ColumnChart(document.getElementById('projectedchart'));
-        chart.draw(data, options);
+        chart.draw(data, performanceOptions);
       },
       placeLineups: function () {
         var bestVariations = window.variations.slice().sort(function (a, b) {
@@ -526,7 +519,6 @@ javascript: (function () {
         for (var movie in fml.formdata) {
           fml.formdata[movie].dollarperbux = (fml.formdata[movie].projected / fml.formdata[movie].bux);
           fml.formdata[movie].bestValue = fml.formdata[movie].dollarperbux >= bestValue;
-          fml.formdata[movie].projected += fml.formdata[movie].bestValue ? 2000000 : 0;
         }
       },
       getVariation: function (passedLineup, bux) {
@@ -554,6 +546,7 @@ javascript: (function () {
           bux = 1000;
         for (var i = 0; i < vlineup.length; i++) {
           projected += vlineup[i].projected;
+          projected += vlineup[i].bestValue ? 2000000 : 0;
           bux -= vlineup[i].bux;
         }
         return {
