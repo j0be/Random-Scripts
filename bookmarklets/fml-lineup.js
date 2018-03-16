@@ -1,15 +1,16 @@
 javascript: (function () {
   window.fml = {
-    data: { /* raw data */ },
-    formdata: { /* finessed a bit */ },
-    targets: {
-      'fml': 'http://fantasymovieleague.com',
-      'mojo': 'http://www.boxofficemojo.com/news/',
-      'pro': 'http://pro.boxoffice.com/category/boxoffice-forecasts/',
-      'rep': 'http://www.boxofficereport.com/predictions/predictions.html',
-      'bop': 'http://www.boxofficeprophets.com/',
+    /* Settings you may want to edit */
+    staleThreshold: 5,
+    autoProjection: 50000,
+    targets: { /* Modify the numbers on the right for how much to adjust each site's scraped projections (1 = no change) */
+      'fml':  ['http://fantasymovieleague.com',                                 0.977],
+      'mojo': ['http://www.boxofficemojo.com/news/',                            0.957],
+      'pro':  ['http://pro.boxoffice.com/category/boxoffice-forecasts/',        0.954],
+      'rep':  ['http://www.boxofficereport.com/predictions/predictions.html',   0.953],
+      'bop':  ['http://www.boxofficeprophets.com/',                             0.942],
     },
-    weekendWeight: {
+    weekendWeight: { /* This is how much to weight a movie that is split into separate days */
       '3': {
         'FRI': .4184,
         'SAT': .3309,
@@ -22,7 +23,10 @@ javascript: (function () {
         'MON': .1298
       }
     },
-    staleThreshold: 5,
+    /* End Settings */
+
+    data: { /* raw data */ },
+    formdata: { /* finessed a bit */ },
     handlers: {
       prompt: function (ostr) {
         var forceAlert = ostr ? true : false;
@@ -30,7 +34,7 @@ javascript: (function () {
         var optionsstr = '';
         for (var key in fml.targets) {
           if (fml.targets.hasOwnProperty(key)) {
-            host = (fml.targets[key]).replace(/https?:\/\//, '').replace(/\.com.*/, '.com');
+            host = (fml.targets[key][0]).replace(/https?:\/\//, '').replace(/\.com.*/, '.com');
             if (!fml.data[key] && document.location.hostname !== host) {
               optionsstr += '\n\u2022 ' + key + ': ' + host;
             }
@@ -48,7 +52,7 @@ javascript: (function () {
       navigate: function (target) {
         if (fml.targets[target]) {
           var separator = target === 'fml' ? '?' : '#';
-          document.location.href = fml.targets[target] +
+          document.location.href = fml.targets[target][0] +
             (JSON.stringify(fml.data) != '{}' ?
               separator + 'data=' + encodeURIComponent(JSON.stringify(fml.data)) :
               '');
@@ -110,6 +114,7 @@ javascript: (function () {
           styles.innerHTML += '.fml-calc .calc-form label:hover .projections { display: block } ';
           styles.innerHTML += '.fml-calc .calc-form label.noProjection { color: #f66; } ';
           styles.innerHTML += '.fml-calc .calc-form input { background: rgba(255,255,255,.2); color: #fff } ';
+          styles.innerHTML += '.fml-calc .calc-form input::-webkit-outer-spin-button, .fml-calc .calc-form input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0 } ';
           styles.innerHTML += '.fml-calc .calc-form input, .fml-calc .calc-form button { display: inline-block; height: 25px; vertical-align: top; width: 130px; border: 0; padding: .2em .5em; font-family: monospace } ';
           styles.innerHTML += '.fml-calc .calc-form button { font-family: inherit; font-weight: bold; cursor: pointer; width: auto } ';
           styles.innerHTML += '.fml-calc .calc-form>div { text-align: center; margin-bottom: 1em } ';
@@ -130,7 +135,7 @@ javascript: (function () {
         calcform = document.querySelectorAll('.fml-calc .calc-form')[0];
         calcform.innerHTML = '';
         for (var i = 0; i < fml.formdata.length; i++) {
-          if (fml.formdata[i].bux > 0) {
+          if (fml.formdata[i].bux >= 0) {
             labelStr = '<label ' + (!fml.formdata[i].hasProjection ? 'class="noProjection" title="Autofilled projection data"' : 'class="hasProjection"') + ' for="calc-' + i + '">';
 
             if (fml.formdata[i].hasProjection) {
@@ -156,7 +161,7 @@ javascript: (function () {
 
             calcform.innerHTML += '<div>' +
               '<button title="Subtract 10% from value" onclick="fml.handlers.modifyProjected(this,-10)">-</button>' +
-              '<input id="calc-' + i + '" name="' + fml.formdata[i].code + '" value="' + fml.formdata[i].projected + '" />' +
+              '<input id="calc-' + i + '" name="' + fml.formdata[i].code + '" value="' + fml.formdata[i].projected + '" type="number" />' +
               '<button title="Add 10% to value" onclick="fml.handlers.modifyProjected(this,10)">+</button>' +
               '</div>';
           }
@@ -179,7 +184,7 @@ javascript: (function () {
         for (var key in top10.slice(0, 10)) {
           projected = top10[key].projected - (top10[key].bestValue ? 2000000 : 0);
           projected = Math.round(projected / 100000) / 10;
-          if (projected > 0) {
+          if (projected >= 0) {
             str += top10[key].title + '|';
             str += '$' + projected.toFixed(1) + "M\r\n";
           }
@@ -230,18 +235,17 @@ javascript: (function () {
         document.querySelectorAll('.fml-calc .output')[0].insertBefore(projectedChart, document.querySelectorAll('.fml-calc .output')[0].childNodes[1]);
 
         for (var key in fml.formdata) {
-          if (fml.formdata[key].title && fml.formdata[key].projected > 0) {
-            var min = 5000000000, max = 0;
+          if (fml.formdata[key].title && fml.formdata[key].projected >= 0) {
+            var min = 9000000000, max = 0;
             for (datakey in fml.data) {
               for (innerkey in fml.data[datakey]) {
-                console.log(fml.formdata[key].code, innerkey);
                 if (fml.formdata[key].code == innerkey) {
                   min = Math.min(min, fml.data[datakey][innerkey]);
                   max = Math.max(max, fml.data[datakey][innerkey]);
                 }
               }
             }
-            min = min === 5000000000 ? 0 : min;
+            min = min === 9000000000 ? 0 : min;
             projectedData.push([
               fml.formdata[key].title + ' ' + fml.formdata[key].day,
               min,
@@ -412,7 +416,6 @@ javascript: (function () {
             fml.handlers.prompt("\u2714 Grabbed data from boxofficeprophets!\n\n");
           } else {
             var headings = document.querySelectorAll('td>a[href*="column/index.cfm?columnID="] strong');
-            debugger;
             for (var key in headings) {
               if (headings[key].innerHTML && headings[key].innerHTML.trim().toLowerCase() === 'weekend forecast') {
                 var postedDate = headings[key].closest('table').querySelectorAll('font[color="black"] strong'),
@@ -439,7 +442,7 @@ javascript: (function () {
               sum: 0,
               count: 0
             };
-            tempArr[movie].sum = tempArr[movie].sum + projectedData[source][movie];
+            tempArr[movie].sum += projectedData[source][movie] * fml.targets[source][1];
             tempArr[movie].count = tempArr[movie].count + 1;
           }
         }
@@ -474,7 +477,7 @@ javascript: (function () {
           var projected = projectedData[code],
             hasProjection = !!projected;
           if (!hasProjection) {
-            projected = cost * 50000;
+            projected = cost * fml.autoProjection;
             movies[i].setAttribute('style', 'border: 1px solid #f00');
           }
 
