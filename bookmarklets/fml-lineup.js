@@ -1,8 +1,8 @@
 javascript: (function () {
   window.fml = {
     /* Settings you may want to edit */
-    staleThreshold: 5,
-    autoProjection: 50000,
+    staleThreshold: 5, /* Number of days before a post is considered too old to the scraper */
+    autoProjection: 50000, /* If we don't have a projection, how many $ should we give it per FML bux */
     targets: { /* Modify the numbers on the right for how much to adjust each site's scraped projections (1 = no change) */
       'fml':  ['http://fantasymovieleague.com',                                 0.977],
       'mojo': ['http://www.boxofficemojo.com/news/',                            0.957],
@@ -10,13 +10,13 @@ javascript: (function () {
       'rep':  ['http://www.boxofficereport.com/predictions/predictions.html',   0.953],
       'bop':  ['http://www.boxofficeprophets.com/',                             0.942],
     },
-    weekendWeight: { /* This is how much to weight a movie that is split into separate days */
-      '3': {
+    weekendWeight: { /* This is how much to weight each day of a movie that is split into separate days */
+      '3': { /* 3 day weekend */
         'FRI': .4184,
         'SAT': .3309,
         'SUN': .2507
       },
-      '4': {
+      '4': { /* 4 day weekend */
         'FRI': .311,
         'SAT': .2793,
         'SUN': .2798,
@@ -25,8 +25,8 @@ javascript: (function () {
     },
     /* End Settings */
 
-    data: { /* raw data */ },
-    formdata: { /* finessed a bit */ },
+    data: { },
+    formdata: { },
     handlers: {
       prompt: function (ostr) {
         var forceAlert = ostr ? true : false;
@@ -443,7 +443,7 @@ javascript: (function () {
               count: 0
             };
             tempArr[movie].sum += projectedData[source][movie] * fml.targets[source][1];
-            tempArr[movie].count = tempArr[movie].count + 1;
+            tempArr[movie].count ++;
           }
         }
         for (var movie in tempArr) {
