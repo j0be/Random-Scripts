@@ -1,17 +1,26 @@
 javascript: (function () {
   window.fml = {
-    data: {/* raw data */},
-    formdata: {/* finessed a bit */},
+    data: { /* raw data */ },
+    formdata: { /* finessed a bit */ },
     targets: {
-      'fml':'http://fantasymovieleague.com',
-      'mojo':'http://www.boxofficemojo.com/news/',
-      'pro':'http://pro.boxoffice.com/category/boxoffice-forecasts/',
-      'rep':'http://www.boxofficereport.com/predictions/predictions.html',
+      'fml': 'http://fantasymovieleague.com',
+      'mojo': 'http://www.boxofficemojo.com/news/',
+      'pro': 'http://pro.boxoffice.com/category/boxoffice-forecasts/',
+      'rep': 'http://www.boxofficereport.com/predictions/predictions.html',
       'bop': 'http://www.boxofficeprophets.com/',
     },
     weekendWeight: {
-      '3': { 'FRI': .4184, 'SAT': .3309, 'SUN': .2507 },
-      '4': { 'FRI': .311, 'SAT': .2793, 'SUN': .2798, 'MON': .1298 }
+      '3': {
+        'FRI': .4184,
+        'SAT': .3309,
+        'SUN': .2507
+      },
+      '4': {
+        'FRI': .311,
+        'SAT': .2793,
+        'SUN': .2798,
+        'MON': .1298
+      }
     },
     staleThreshold: 5,
     handlers: {
@@ -19,12 +28,14 @@ javascript: (function () {
         var forceAlert = ostr ? true : false;
         str = (ostr ? ostr : '') + 'Where would you like to go?';
         var optionsstr = '';
-        for (var key in fml.targets) { if (fml.targets.hasOwnProperty(key)) {
-          host = (fml.targets[key]).replace(/https?:\/\//, '').replace(/\.com.*/, '.com');
-          if (!fml.data[key] && document.location.hostname !== host) {
-            optionsstr += '\n\u2022 ' + key + ': ' + host;
+        for (var key in fml.targets) {
+          if (fml.targets.hasOwnProperty(key)) {
+            host = (fml.targets[key]).replace(/https?:\/\//, '').replace(/\.com.*/, '.com');
+            if (!fml.data[key] && document.location.hostname !== host) {
+              optionsstr += '\n\u2022 ' + key + ': ' + host;
+            }
           }
-        }}
+        }
         if (optionsstr.split('\n').length > 2) {
           fml.handlers.navigate(prompt(str + optionsstr, 'fml'));
         } else {
@@ -39,7 +50,7 @@ javascript: (function () {
           var separator = target === 'fml' ? '?' : '#';
           document.location.href = fml.targets[target] +
             (JSON.stringify(fml.data) != '{}' ?
-              separator + 'data=' + encodeURIComponent(JSON.stringify(fml.data)):
+              separator + 'data=' + encodeURIComponent(JSON.stringify(fml.data)) :
               '');
         } else {
           alert('That isn\'t one of the options');
@@ -77,7 +88,7 @@ javascript: (function () {
           styles.innerHTML += '.fml-calc .output>div+p { clear: left; } ';
           styles.innerHTML += '.fml-calc .output .img { float: left; margin-bottom: .2em; box-sizing: content-box; border-radius: 4px; position: relative; width: 86px; min-height: 48px } ';
           styles.innerHTML += '.fml-calc .output .img img { width: 86px; float: left; height: 48px; object-fit: cover; } ';
-          styles.innerHTML += '.fml-calc .output .img:hover::before, .fml-calc .output .img:focus::before, .fml-calc .output .img:active::before, '+
+          styles.innerHTML += '.fml-calc .output .img:hover::before, .fml-calc .output .img:focus::before, .fml-calc .output .img:active::before, ' +
             '.fml-calc .output .img:hover::after, .fml-calc .output .img:focus::after, .fml-calc .output .img:active::after { content: attr(data-title); position: absolute; top: -5em; left: 50%; font-size: 12px; background: #222; padding: .5em; white-space: nowrap; transform: translate(-50%,0); } ';
           styles.innerHTML += '.fml-calc .output .img:hover::after, .fml-calc .output .img:focus::after, .fml-calc .output .img:active::after { content: attr(data-stats); top: -3em; } ';
           styles.innerHTML += '.fml-calc .output .img.bestvalue:hover::before, .fml-calc .output .img.bestvalue:focus::before, .fml-calc .output .img.bestvalue:active::before { content: attr(data-title) " (Best Performer)";} ';
@@ -90,7 +101,13 @@ javascript: (function () {
           styles.innerHTML += '.fml-calc .output span { float: right; font-size: 1.6em; font-weight: bold; margin-bottom: 0.4em; } ';
           styles.innerHTML += '.fml-calc .calc-form { float: left; color: #fff; margin-top: -18px; } ';
           styles.innerHTML += '.fml-calc .calc-form label, .fml-calc .calc-form input { display: block; text-align: right } ';
-          styles.innerHTML += '.fml-calc .calc-form label { font-size: 12px; margin: 0 0 .3em; text-align: center } ';
+          styles.innerHTML += '.fml-calc .calc-form label { font-size: 12px; margin: 0 0 .3em; text-align: center; position: relative } ';
+          styles.innerHTML += '.fml-calc .calc-form label .projections { display: none; min-width: 8em; position: absolute; left: 100%; background: #222; padding: .5em; white-space: nowrap; transform: translate(0, -50%); top: 50%; text-align: left; } ';
+          styles.innerHTML += '.fml-calc .calc-form label .projections .title { font-size: 1.2em; margin-bottom: .5em; display: inline-block; } ';
+          styles.innerHTML += '.fml-calc .calc-form label .projections li { clear: both; } ';
+          styles.innerHTML += '.fml-calc .calc-form label .projections li span:first-child { float: left;  } ';
+          styles.innerHTML += '.fml-calc .calc-form label .projections li span:last-child { float: right; padding-left: 1em; box-sizing: border-box; } ';
+          styles.innerHTML += '.fml-calc .calc-form label:hover .projections { display: block } ';
           styles.innerHTML += '.fml-calc .calc-form label.noProjection { color: #f66; } ';
           styles.innerHTML += '.fml-calc .calc-form input { background: rgba(255,255,255,.2); color: #fff } ';
           styles.innerHTML += '.fml-calc .calc-form input, .fml-calc .calc-form button { display: inline-block; height: 25px; vertical-align: top; width: 130px; border: 0; padding: .2em .5em; font-family: monospace } ';
@@ -102,7 +119,9 @@ javascript: (function () {
           var script = document.createElement('script');
           script.onload = function () {
             window.google = google;
-            window.google.charts.load('current', {'packages':['corechart']});
+            window.google.charts.load('current', {
+              'packages': ['corechart']
+            });
             window.google.charts.setOnLoadCallback(fml.handlers.addCharts);
           };
           script.setAttribute('src', 'https://www.gstatic.com/charts/loader.js');
@@ -112,15 +131,34 @@ javascript: (function () {
         calcform.innerHTML = '';
         for (var i = 0; i < fml.formdata.length; i++) {
           if (fml.formdata[i].bux > 0) {
-            calcform.innerHTML += '<label ' + (!fml.formdata[i].hasProjection ? 'class="noProjection" title="Autofilled projection data"' : '')+' for="calc-' + i + '">' + 
-              fml.formdata[i].title + ' ' + fml.formdata[i].day + 
-              (!fml.formdata[i].hasProjection ? '*':'') +
-            '</label>';
+            labelStr = '<label ' + (!fml.formdata[i].hasProjection ? 'class="noProjection" title="Autofilled projection data"' : 'class="hasProjection"') + ' for="calc-' + i + '">';
+
+            if (fml.formdata[i].hasProjection) {
+              labelStr += '<span class="projections"><span class="title">'
+                + fml.formdata[i].title + ' ' + fml.formdata[i].day + '</span><ul>';
+              for (key in fml.data) {
+                if (fml.data.hasOwnProperty(key)) {
+                  for (innerkey in fml.data[key]) {
+                    if (innerkey === fml.formdata[i].code) {
+                      projected = Math.round(fml.data[key][innerkey] / 100000) / 10;
+                      labelStr += '<li><span>'+key+'</span><span>$' + projected.toFixed(1) + 'M</span></li>';
+                    }
+                  }
+                }
+              }
+              labelStr += '</ul></span>';
+            }
+
+            labelStr += fml.formdata[i].title + ' ' + fml.formdata[i].day +
+              (!fml.formdata[i].hasProjection ? '*' : '');
+            labelStr += '</label>';
+            calcform.innerHTML += labelStr;
+
             calcform.innerHTML += '<div>' +
               '<button title="Subtract 10% from value" onclick="fml.handlers.modifyProjected(this,-10)">-</button>' +
               '<input id="calc-' + i + '" name="' + fml.formdata[i].code + '" value="' + fml.formdata[i].projected + '" />' +
               '<button title="Add 10% to value" onclick="fml.handlers.modifyProjected(this,10)">+</button>' +
-            '</div>';
+              '</div>';
           }
         }
         calcform.innerHTML += '<button onclick="fml.handlers.recalculate()">Recalculate</button>';
@@ -131,19 +169,19 @@ javascript: (function () {
           str = "My projections for this weekend:\r\n\r\nMovie|Projected\r\n:--|--:\r\n",
           projected = 0;
         document.querySelectorAll('.cineplex__bd')[0].appendChild(copyText);
-        var top10 = fml.formdata.sort(function(a,b) {
+        var top10 = fml.formdata.sort(function (a, b) {
           aprojected = a.projected - (a.bestValue ? 2000000 : 0);
           bprojected = b.projected - (b.bestValue ? 2000000 : 0);
-          return aprojected < bprojected ? 1:
+          return aprojected < bprojected ? 1 :
             (aprojected > bprojected ? -1 : 0);
         });
 
         for (var key in top10.slice(0, 10)) {
           projected = top10[key].projected - (top10[key].bestValue ? 2000000 : 0);
-          projected = Math.round(projected / 100000)/10;
+          projected = Math.round(projected / 100000) / 10;
           if (projected > 0) {
             str += top10[key].title + '|';
-            str += '$'+ projected.toFixed(1) + "M\r\n";
+            str += '$' + projected.toFixed(1) + "M\r\n";
           }
         }
 
@@ -169,11 +207,42 @@ javascript: (function () {
         if (typeof window.google === 'undefined') {
           return false;
         }
-        var performanceData = [['Movie','$/bux']],
+        var performanceData = [
+            ['Movie', '$/bux']
+          ],
           performanceChart = document.createElement('p'),
-          projectedData = [['Movie','projected']],
+          projectedData = [
+            ['Movie', 'projected']
+          ],
           projectedChart = document.createElement('p'),
-          options = { backgroundColor: 'transparent', titleTextStyle: { color: '#fff' }, hAxis: { textStyle: { color: '#fff' }, titleTextStyle: { color: '#fff' } }, vAxis: { textStyle: { color: '#fff' }, titleTextStyle: { color: '#fff' } }, legend: { position: 'none', textStyle: { color: '#fff' } } };
+          options = {
+            backgroundColor: 'transparent',
+            titleTextStyle: {
+              color: '#fff'
+            },
+            hAxis: {
+              textStyle: {
+                color: '#fff'
+              },
+              titleTextStyle: {
+                color: '#fff'
+              }
+            },
+            vAxis: {
+              textStyle: {
+                color: '#fff'
+              },
+              titleTextStyle: {
+                color: '#fff'
+              }
+            },
+            legend: {
+              position: 'none',
+              textStyle: {
+                color: '#fff'
+              }
+            }
+          };
 
         performanceChart.setAttribute('id', 'performancechart');
         projectedChart.setAttribute('id', 'projectedchart');
@@ -237,15 +306,14 @@ javascript: (function () {
       modifyProjected: function (element, value) {
         var input = element.parentElement.getElementsByTagName('input')[0],
           inputVal = parseFloat(input.value);
-        input.value = Math.round(inputVal * ((100+value)/100));
+        input.value = Math.round(inputVal * ((100 + value) / 100));
       }
     },
     helpers: {
       detectPath: function () {
         if (fml.helpers.path[document.location.hostname]) {
           fml.data = !!document.location.href.match(/[\#\?]data=/) ?
-            JSON.parse(decodeURIComponent(document.location.href.replace(/.*?[\#\?]data=/, ''))):
-            {};
+            JSON.parse(decodeURIComponent(document.location.href.replace(/.*?[\#\?]data=/, ''))) : {};
           fml.helpers.path[document.location.hostname]();
         } else {
           fml.handlers.prompt();
@@ -263,7 +331,7 @@ javascript: (function () {
             for (var i = 0; i < links.length; i++) {
               var dateStr = links[i].parentNode.querySelectorAll('.date')[0],
                 date = new Date(dateStr.innerHTML),
-                today = (new Date()).setHours(0, 0, 0, 0); 
+                today = (new Date()).setHours(0, 0, 0, 0);
 
               if (links[i].getElementsByTagName('a')[0].innerHTML.match('Weekend')) {
                 if (today - date < fml.staleThreshold * 24 * 60 * 60 * 1000) {
@@ -314,7 +382,7 @@ javascript: (function () {
             for (var i = 0; i < rows.length; i++) {
               var dateStr = rows[i].querySelectorAll('td>font>b')[0],
                 date = new Date(dateStr.innerHTML),
-                today = (new Date()).setHours(0,0,0,0);
+                today = (new Date()).setHours(0, 0, 0, 0);
 
               if (date.getDay() == 4) {
                 if (today - date < fml.staleThreshold * 24 * 60 * 60 * 1000) {
@@ -350,11 +418,12 @@ javascript: (function () {
             }
             fml.handlers.prompt("\u2714 Grabbed data from boxofficeprophets!\n\n");
           } else {
-            var headings = document.querySelectorAll('.fpcelltitle strong');
+            var headings = document.querySelectorAll('td>a[href*="column/index.cfm?columnID="] strong');
+            debugger;
             for (var key in headings) {
-              if (headings[key].innerHTML.trim().toLowerCase() === 'weekend forecast') {
-                var dateStr = headings[key].closest('table').querySelectorAll('font[color="black"] strong').textContent,
-                  date = new Date(dateStr),
+              if (headings[key].innerHTML && headings[key].innerHTML.trim().toLowerCase() === 'weekend forecast') {
+                var postedDate = headings[key].closest('table').querySelectorAll('font[color="black"] strong'),
+                  date = postedDate.length ? new Date(postedDate.textContent) : (new Date()).setHours(0, 0, 0, 0),
                   today = (new Date()).setHours(0, 0, 0, 0);
                 if (today - date < fml.staleThreshold * 24 * 60 * 60 * 1000) {
                   document.location.href = headings[key].closest('a').getAttribute('href') +
@@ -373,7 +442,10 @@ javascript: (function () {
           returnArr = {};
         for (var source in projectedData) {
           for (var movie in projectedData[source]) {
-            tempArr[movie] = tempArr[movie] ? tempArr[movie] : { sum: 0, count: 0 };
+            tempArr[movie] = tempArr[movie] ? tempArr[movie] : {
+              sum: 0,
+              count: 0
+            };
             tempArr[movie].sum = tempArr[movie].sum + projectedData[source][movie];
             tempArr[movie].count = tempArr[movie].count + 1;
           }
