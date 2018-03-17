@@ -35,7 +35,7 @@ javascript: (function () {
         for (var key in fml.targets) {
           if (fml.targets.hasOwnProperty(key)) {
             host = (fml.targets[key][0]).replace(/https?:\/\//, '').replace(/\.com.*/, '.com');
-            if (!fml.data[key] && document.location.hostname !== host) {
+            if ((!fml.data[key] && document.location.hostname !== host) || key === 'fml') {
               optionsstr += '\n\u2022 ' + key + ': ' + host;
             }
           }
@@ -318,9 +318,30 @@ javascript: (function () {
       },
       path: {
         'fantasymovieleague.com': function () {
-          window.fml.formdata = fml.helpers.parseFMLData(fml.helpers.flattenData(fml.data));
-          fml.handlers.setupDom();
-          fml.handlers.recalculate();
+          if (document.location.href.match('news')) {
+            var items = document.querySelectorAll('.news-item h5 a');
+            for (var key in items) {
+              if (items[key].getAttribute('title').match(/Estimates/i)) {
+                document.location.href = items[key].getAttribute('href') +
+                  '?data=' + encodeURIComponent(JSON.stringify(fml.data));
+                break;
+              }
+            }
+          } else if (document.location.href.match('posts')) {
+            var postText = document.querySelectorAll('.post__content')[0].textContent,
+              predictions = postText.match(/.*?\$[\d\.,]+( million)?/gi);
+            fml.data.fml = {};
+            for (var i = 0; i < predictions.length; i++) {
+              var title = predictions[i].match(/(?<=").+(?=")/)[0];
+              var projected = parseFloat(predictions[i].match(/(?<=\$).+/)[0].replace(/[,\.]/g, '').replace(/ ?million/i, '00000'));
+              fml.data.fml[fml.helpers.cleanTitle(title)] = projected;
+            }
+            fml.handlers.prompt("\u2714 Grabbed data from fantasymovieleague!\n\n");
+          } else {
+            window.fml.formdata = fml.helpers.parseFMLData(fml.helpers.flattenData(fml.data));
+            fml.handlers.setupDom();
+            fml.handlers.recalculate();
+          }
         },
         'pro.boxoffice.com': function () {
           if (document.getElementsByTagName('body')[0].className.match('category')) {
