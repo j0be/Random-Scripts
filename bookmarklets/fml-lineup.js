@@ -1,14 +1,16 @@
 javascript: (function () {
   window.fml = {
     /* Settings you may want to edit */
-    staleThreshold: 5, /* Number of days before a post is considered too old to the scraper */
-    autoProjection: 50000, /* If we don't have a projection, how many $ should we give it per FML bux */
+    staleThreshold: 5,
+    /* Number of days before a post is considered too old to the scraper */
+    autoProjection: 50000,
+    /* If we don't have a projection, how many $ should we give it per FML bux */
     targets: { /* Modify the numbers on the right for how much to adjust each site's scraped projections (1 = no change) */
-      'fml':  ['http://fantasymovieleague.com',                                 0.977],
-      'mojo': ['http://www.boxofficemojo.com/news/',                            0.957],
-      'pro':  ['http://pro.boxoffice.com/category/boxoffice-forecasts/',        0.954],
-      'rep':  ['http://www.boxofficereport.com/predictions/predictions.html',   0.953],
-      'bop':  ['http://www.boxofficeprophets.com/',                             0.942],
+      'fml': ['http://fantasymovieleague.com', 0.977],
+      'mojo': ['http://www.boxofficemojo.com/news/', 0.957],
+      'pro': ['http://pro.boxoffice.com/category/boxoffice-forecasts/', 0.954],
+      'rep': ['http://www.boxofficereport.com/predictions/predictions.html', 0.953],
+      'bop': ['http://www.boxofficeprophets.com/', 0.942],
     },
     weekendWeight: { /* This is how much to weight each day of a movie that is split into separate days */
       '3': { /* 3 day weekend */
@@ -25,8 +27,8 @@ javascript: (function () {
     },
     /* End Settings */
 
-    data: { },
-    formdata: { },
+    data: {},
+    formdata: {},
     handlers: {
       prompt: function (ostr) {
         var forceAlert = ostr ? true : false;
@@ -135,18 +137,18 @@ javascript: (function () {
         calcform = document.querySelectorAll('.fml-calc .calc-form')[0];
         calcform.innerHTML = '';
         for (var i = 0; i < fml.formdata.length; i++) {
-          if (fml.formdata[i].bux >= 0) {
+          if (fml.formdata[i].bux > 0) {
             labelStr = '<label ' + (!fml.formdata[i].hasProjection ? 'class="noProjection" title="Autofilled projection data"' : 'class="hasProjection"') + ' for="calc-' + i + '">';
 
             if (fml.formdata[i].hasProjection) {
-              labelStr += '<span class="projections"><span class="title">'
-                + fml.formdata[i].title + ' ' + fml.formdata[i].day + '</span><ul>';
+              labelStr += '<span class="projections"><span class="title">' +
+                fml.formdata[i].title + ' ' + fml.formdata[i].day + '</span><ul>';
               for (key in fml.data) {
                 if (fml.data.hasOwnProperty(key)) {
                   for (innerkey in fml.data[key]) {
                     if (innerkey === fml.formdata[i].code) {
                       projected = Math.round(fml.data[key][innerkey] / 100000) / 10;
-                      labelStr += '<li><span>'+key+'</span><span>$' + projected.toFixed(1) + 'M</span></li>';
+                      labelStr += '<li><span>' + key + '</span><span>$' + projected.toFixed(1) + 'M</span></li>';
                     }
                   }
                 }
@@ -220,14 +222,46 @@ javascript: (function () {
             ['Movie', 'min', 'max', 'projected']
           ],
           projectedChart = document.createElement('p'),
-          options = { title: 'Dollars per FML bux', backgroundColor: 'transparent', titleTextStyle: { color: '#fff' }, hAxis: { textStyle: { color: '#fff' }, titleTextStyle: { color: '#fff' } }, vAxis: { textStyle: { color: '#fff' }, titleTextStyle: { color: '#fff' } }, legend: { position: 'none', textStyle: { color: '#fff' } } };
+          options = {
+            title: 'Dollars per FML bux',
+            backgroundColor: 'transparent',
+            titleTextStyle: {
+              color: '#fff'
+            },
+            hAxis: {
+              textStyle: {
+                color: '#fff'
+              },
+              titleTextStyle: {
+                color: '#fff'
+              }
+            },
+            vAxis: {
+              textStyle: {
+                color: '#fff'
+              },
+              titleTextStyle: {
+                color: '#fff'
+              }
+            },
+            legend: {
+              position: 'none',
+              textStyle: {
+                color: '#fff'
+              }
+            }
+          };
 
         var performanceOptions = JSON.parse(JSON.stringify(options)),
           projectedOptions = JSON.parse(JSON.stringify(options));
 
         projectedOptions.title = 'Weekend Projections';
         projectedOptions.seriesType = 'bars';
-        projectedOptions.series = { 2: { type: 'line' } };
+        projectedOptions.series = {
+          2: {
+            type: 'line'
+          }
+        };
 
         performanceChart.setAttribute('id', 'performancechart');
         projectedChart.setAttribute('id', 'projectedchart');
@@ -236,7 +270,8 @@ javascript: (function () {
 
         for (var key in fml.formdata) {
           if (fml.formdata[key].title && fml.formdata[key].projected >= 0) {
-            var min = 9000000000, max = 0;
+            var min = 9000000000,
+              max = 0;
             for (datakey in fml.data) {
               for (innerkey in fml.data[datakey]) {
                 if (fml.formdata[key].code == innerkey) {
@@ -352,7 +387,7 @@ javascript: (function () {
                 today = (new Date()).setHours(0, 0, 0, 0);
 
               if (links[i].getElementsByTagName('a')[0].innerHTML.match('Weekend')) {
-                if (today - date < fml.staleThreshold * 24 * 60 * 60 * 1000) {
+                if (today - date < (fml.staleThreshold + 1) * 24 * 60 * 60 * 1000) {
                   document.location.href = links[i].getElementsByTagName('a')[0].getAttribute('href') +
                     '#data=' + encodeURIComponent(JSON.stringify(fml.data));
                 } else {
@@ -379,7 +414,7 @@ javascript: (function () {
           var dateStr = document.querySelectorAll('h5')[0].innerHTML.replace(/Published on /mi, '').replace(/ at(.|\r|\n)*/i, ''),
             date = new Date(dateStr),
             today = (new Date()).setHours(0, 0, 0, 0);
-          if (today - date < fml.staleThreshold * 24 * 60 * 60 * 1000) {
+          if (today - date < (fml.staleThreshold+1) * 24 * 60 * 60 * 1000) {
             var options = Array.from(document.querySelectorAll('h4>table.inlineTable:nth-child(1) tr')).slice(1);
             fml.data.rep = {};
             for (var key in options) {
@@ -440,7 +475,7 @@ javascript: (function () {
             for (var key in headings) {
               if (headings[key].innerHTML && headings[key].innerHTML.trim().toLowerCase() === 'weekend forecast') {
                 var postedDate = headings[key].closest('table').querySelectorAll('font[color="black"] strong'),
-                  date = postedDate.length ? new Date(postedDate.textContent) : (new Date()).setHours(0, 0, 0, 0),
+                  date = !!postedDate.textContent ? new Date(postedDate.textContent) : (new Date()).setHours(0, 0, 0, 0),
                   today = (new Date()).setHours(0, 0, 0, 0);
                 if (today - date < fml.staleThreshold * 24 * 60 * 60 * 1000) {
                   document.location.href = headings[key].closest('a').getAttribute('href') +
@@ -464,7 +499,7 @@ javascript: (function () {
               count: 0
             };
             tempArr[movie].sum += projectedData[source][movie] * fml.targets[source][1];
-            tempArr[movie].count ++;
+            tempArr[movie].count++;
           }
         }
         for (var movie in tempArr) {
