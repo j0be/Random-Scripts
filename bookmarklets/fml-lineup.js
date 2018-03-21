@@ -3,12 +3,13 @@ javascript: (function () {
     /* Settings you may want to edit */
     staleThreshold: 5, /* Number of days before a post is considered too old to the scraper */
     autoProjection: 50000, /* If we don't have a projection, how many $ should we give it per FML bux */
-    targets: { /* Modify the numbers on the right for how much to adjust each site's scraped projections (1 = no change) */
-      'fml': ['http://fantasymovieleague.com', 0.977],
-      'mojo': ['http://www.boxofficemojo.com/news/', 0.957],
-      'pro': ['http://pro.boxoffice.com/category/boxoffice-forecasts/', 0.954],
-      'rep': ['http://www.boxofficereport.com/predictions/predictions.html', 0.953],
-      'bop': ['http://www.boxofficeprophets.com/', 0.942],
+    targets: { /* Adjusted manually tweaks the actual projections, weight is how much bearing to give it when averaging the numbers */
+      'fml': { url: 'http://fantasymovieleague.com', adjusted: 0.977, weight: .9},
+      'mojo': { url: 'http://www.boxofficemojo.com/news/', adjusted: 0.957, weight: 1},
+      'pro': { url: 'http://pro.boxoffice.com/category/boxoffice-forecasts/', adjusted: 0.954, weight: 1},
+      'rep': { url: 'http://www.boxofficereport.com/predictions/predictions.html', adjusted: 0.953, weight: 1},
+      'bop': { url: 'http://www.boxofficeprophets.com/', adjusted: 0.942, weight: 1},
+      'derby': { url: 'https://derby.boxofficetheory.com/AllPredictions.aspx', adjusted: 1, weight: .6},
     },
     weekendWeight: { /* This is how much to weight each day of a movie that is split into separate days */
       '3': { /* 3 day weekend */
@@ -34,7 +35,7 @@ javascript: (function () {
         var optionsstr = '';
         for (var key in fml.targets) {
           if (fml.targets.hasOwnProperty(key)) {
-            host = (fml.targets[key][0]).replace(/https?:\/\//, '').replace(/\.com.*/, '.com');
+            host = (fml.targets[key].url).replace(/https?:\/\//, '').replace(/\.com.*/, '.com');
             if ((!fml.data[key] && document.location.hostname !== host) || key === 'fml') {
               optionsstr += '\n\u2022 ' + key + ': ' + host;
             }
@@ -52,7 +53,7 @@ javascript: (function () {
       navigate: function (target) {
         if (fml.targets[target]) {
           var separator = target === 'fml' ? '?' : '#';
-          document.location.href = fml.targets[target][0] +
+          document.location.href = fml.targets[target].url +
             (JSON.stringify(fml.data) != '{}' ?
               separator + 'data=' + encodeURIComponent(JSON.stringify(fml.data)) :
               '');
@@ -278,7 +279,7 @@ javascript: (function () {
                 }
               }
             }
-            min = min === 9000000000 ? 0 : min;
+            min = min === 9000000000 || min === max ? 0 : min;
             projectedData.push([
               fml.formdata[key].title + ' ' + fml.formdata[key].day,
               min,
@@ -390,6 +391,7 @@ javascript: (function () {
                   document.location.href = links[i].getElementsByTagName('a')[0].getAttribute('href') +
                     '#data=' + encodeURIComponent(JSON.stringify(fml.data));
                 } else {
+                  fml.data.pro = {};
                   fml.handlers.prompt("\u274C boxofficepro hasn\'t posted yet.\n\n");
                 }
                 break;
@@ -425,6 +427,7 @@ javascript: (function () {
             }
             fml.handlers.prompt("\u2714 Grabbed data from boxofficereport!\n\n");
           } else {
+            fml.data.rep = {};
             fml.handlers.prompt("\u274C boxofficereport hasn\'t posted yet.\n\n");
           }
         },
@@ -441,6 +444,7 @@ javascript: (function () {
                   document.location.href = rows[i].getElementsByTagName('a')[0].getAttribute('href') +
                     '#data=' + encodeURIComponent(JSON.stringify(fml.data));
                 } else {
+                  fml.data.mojo = {};
                   fml.handlers.prompt("\u274C boxofficemojo hasn\'t posted yet.\n\n");
                 }
                 break;
@@ -481,11 +485,21 @@ javascript: (function () {
                     '#data=' + encodeURIComponent(JSON.stringify(fml.data));
                   break;
                 } else {
+                  fml.data.bop = {};
                   fml.handlers.prompt("\u274C boxofficeprophets hasn\'t posted yet.\n\n");
                 }
               }
             }
           }
+        },
+        'derby.boxofficetheory.com': function () {
+          var rows = document.querySelectorAll('.rgRow,.rgAltRow');
+          fml.data.derby = {};
+          for (var i = 0; i < rows.length; i++) {
+            fml.data.derby[fml.helpers.cleanTitle(rows[i].querySelectorAll('td')[0].textContent)] =
+              parseFloat(rows[i].querySelectorAll('td')[2].textContent.replace(/[^\d\.]/g, '')) * 1000000;
+          }
+          fml.handlers.prompt("\u2714 Grabbed data from boxofficetheory!\n\n");
         }
       },
       flattenData: function (projectedData) {
@@ -497,8 +511,8 @@ javascript: (function () {
               sum: 0,
               count: 0
             };
-            tempArr[movie].sum += projectedData[source][movie] * fml.targets[source][1];
-            tempArr[movie].count++;
+            tempArr[movie].sum += projectedData[source][movie] * fml.targets[source].adjusted * fml.targets[source].weight;
+            tempArr[movie].count += fml.targets[source].weight;
           }
         }
         for (var movie in tempArr) {
@@ -507,7 +521,10 @@ javascript: (function () {
         return returnArr;
       },
       cleanTitle: function (titleStr) {
-        return titleStr.replace(/\b(a|an|the)\b/i, '').replace(/\W/g, '').toLowerCase();
+        titleStr = titleStr.replace(/\b(a|an|the)\b/i, ''); /* Remove articles */
+        titleStr = titleStr.replace(/\d+$/, '').replace(/:.*/, ''); /* Try to make sequels consistent */
+        titleStr = titleStr.split(' ').slice(0,2).join(''); /* Take the first two words */
+        return titleStr.replace(/\W/g, '').toLowerCase(); /* Cleanup */
       },
       parseFMLData: function (projectedData) {
         var movies = document.querySelectorAll('ul.cineplex__bd-movies .cineplex__bd-movie-item .outer-wrap'),
