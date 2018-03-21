@@ -1,10 +1,8 @@
 javascript: (function () {
   window.fml = {
     /* Settings you may want to edit */
-    staleThreshold: 5,
-    /* Number of days before a post is considered too old to the scraper */
-    autoProjection: 50000,
-    /* If we don't have a projection, how many $ should we give it per FML bux */
+    staleThreshold: 5, /* Number of days before a post is considered too old to the scraper */
+    autoProjection: 50000, /* If we don't have a projection, how many $ should we give it per FML bux */
     targets: { /* Modify the numbers on the right for how much to adjust each site's scraped projections (1 = no change) */
       'fml': ['http://fantasymovieleague.com', 0.977],
       'mojo': ['http://www.boxofficemojo.com/news/', 0.957],
@@ -368,7 +366,8 @@ javascript: (function () {
             fml.data.fml = {};
             for (var i = 0; i < predictions.length; i++) {
               var title = predictions[i].match(/(?<=").+(?=")/)[0];
-              var projected = parseFloat(predictions[i].match(/(?<=\$).+/)[0].replace(/[,\.]/g, '').replace(/ ?million/i, '00000'));
+              var projected = parseFloat(predictions[i].match(/(?<=\$).+/)[0].replace(/[,]/g, '').replace(/ ?million/i,));
+              projected = projected < 1000 ? projected * 1000000 : projected;
               fml.data.fml[fml.helpers.cleanTitle(title)] = projected;
             }
             fml.handlers.prompt("\u2714 Grabbed data from fantasymovieleague!\n\n");
