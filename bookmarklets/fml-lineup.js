@@ -366,7 +366,7 @@ javascript: (function () {
             fml.data.fml = {};
             for (var i = 0; i < predictions.length; i++) {
               var title = predictions[i].match(/(?<=").+(?=")/)[0];
-              var projected = parseFloat(predictions[i].match(/(?<=\$).+/)[0].replace(/[,]/g, '').replace(/ ?million/i,));
+              var projected = parseFloat(predictions[i].match(/(?<=\$).+/)[0].replace(/[,]/g, '').replace(/ ?million/i,''));
               projected = projected < 1000 ? projected * 1000000 : projected;
               fml.data.fml[fml.helpers.cleanTitle(title)] = projected;
             }
