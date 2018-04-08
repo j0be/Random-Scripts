@@ -42,6 +42,8 @@ javascript: (function () {
           }
           if (!data.data.after) {
             auditApp.taskList.shift();
+            auditApp.i = 0;
+            auditApp.after = '';
           } 
           auditApp.task.init(auditApp.taskList[0]);
         });
