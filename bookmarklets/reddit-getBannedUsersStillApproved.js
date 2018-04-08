@@ -1,78 +1,61 @@
 javascript: (function () {
-  window.approvedUsers = [];
-  window.approvedAfter = '';
-  window.approvedI = 1;
-
-  window.bannedUsers = [];
-  window.bannedAfter = '';
-  window.bannedI = 1;
-
-  window.domStatus = function (str) {
-    if (!$('#domstatus').length) {
-      $('body').append('<div id="domstatus" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%;); padding: .5em; background: #fff; border: 1px solid #999;"></div>')
-    }
-    $('#domstatus').html(str);
-  };
-
-  window.getApprovedList = function () {
-    window.domStatus('Getting Approved Page ' + window.approvedI + '. (' + window.approvedUsers.length + ' approved submitters)');
-    $.ajax({
-      'url': 'https://www.reddit.com/r/centuryClub/about/contributors.json',
-      data: {
-        count: 100,
-        after: window.approvedAfter
-      }
-    }).then(function (data) {
-      if (data.data.children.length) {
-        window.approvedI++;
-        window.approvedAfter = data.data.after;
-        var users = data.data.children;
-        for (var key in users) {
-          window.approvedUsers.push(users[key].name);
+  window.subreddit = $('.pagename.redditname').text();
+  window.auditApp = {
+    i: 1,
+    after: '',
+    urls: {
+      approved: '/r/' + subreddit + '/about/contributors.json',
+      banned: '/r/' + subreddit + '/about/banned.json',
+    },
+    taskList: ['approved', 'banned', 'merge'],
+    users: { approved: [], banned: []},
+    task: {
+      init: function(task) {
+        if (task == 'approved' || task == 'banned') {
+          auditApp.task.list(task);
+        } else {
+          auditApp.task.merge();
         }
-      }
-      if (data.data.after) {
-        window.getApprovedList();
-      } else {
-        window.getBannedList();
-      }
-    });
-  };
-
-  window.getBannedList = function () {
-    window.domStatus('Getting Banned Page ' + window.banI + '. (' + window.bannedUsers.length + ' approved submitters)');
-    $.ajax({
-      'url': 'https://www.reddit.com/r/centuryClub/about/banned.json',
-      data: {
-        count: 100,
-        after: window.bannedAfter
-      }
-    }).then(function (data) {
-      if (data.data.children.length) {
-        window.banI++;
-        window.bannedAfter = data.data.after;
-        var users = data.data.children;
-        for (var key in users) {
-          window.bannedUsers.push(users[key].name);
+      },
+      domstatus: function (str) {
+        if (!$('#domstatus').length) {
+          $('body').append('<div id="domstatus" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%;); padding: .5em; background: #fff; border: 1px solid #999;"></div>')
         }
-      }
-      if (data.data.after) {
-        window.getBannedList();
-      } else {
-        window.mergeLists();
-      }
-    });
-  };
-
-  window.mergeLists = function () {
-    var str = 'Banned users in approved list:<br/>';
-    for (var key in bannedUsers) {
-      if (approvedUsers.indexOf(bannedUsers[key]) !== -1) {
-        str += bannedUsers[key] + '<br/>';
+        $('#domstatus').html(str);
+      },
+      list: function (task) {
+        auditApp.task.domstatus('Getting ' + task + ' page ' + auditApp.i + '. (' + auditApp.users[task].length + ' users)');
+        $.ajax({
+          'url': auditApp.urls[task],
+          data: {
+            count: 100,
+            after: auditApp.after
+          }
+        }).then(function (data) {
+          if (data.data.children.length) {
+            auditApp.i ++;
+            auditApp.after = data.data.after;
+            var users = data.data.children;
+            for (var key in users) {
+              auditApp.users[task].push(users[key].name);
+            }
+          }
+          if (!data.data.after) {
+            auditApp.taskList.shift();
+          } 
+          auditApp.task.init(auditApp.taskList[0]);
+        });
+      },
+      merge: function () {
+        var str = 'Banned users in approved list:<br/>';
+        for (var key in auditApp.users.banned) {
+          if (auditApp.users.approved.indexOf(auditApp.users.banned[key]) !== -1) {
+            str += auditApp.users.banned[key] + '<br/>';
+          }
+        }
+        auditApp.task.domstatus(str);
       }
     }
-    window.domStatus(str);
-  }
-
-  getApprovedList();
+  };
+  auditApp.task.init(auditApp.taskList[0]);
 })();
