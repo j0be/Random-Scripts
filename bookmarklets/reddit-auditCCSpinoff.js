@@ -19,7 +19,7 @@ javascript: (function () {
       },
       domstatus: function (str) {
         if (!$('#domstatus').length) {
-          $('body').append('<div id="domstatus" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%;); padding: .5em; background: #fff; border: 1px solid #999;"></div>')
+          $('body').append('<div id="domstatus" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: .5em; background: #fff; border: 1px solid #999;"></div>')
         }
         $('#domstatus').html(str);
       },
@@ -49,10 +49,10 @@ javascript: (function () {
         });
       },
       merge: function () {
-        var str = 'Users in spinoff that aren\'t in CC:<br/>';
+        var str = '<h3>Users in spinoff that aren\'t in CC:</h3>';
         for (var key in auditApp.users.spinoff) {
-          if (auditApp.users.cc.indexOf(auditApp.users.spinoff[key]) !== -1) {
-            str += auditApp.users.spinoff[key] + '<br/>';
+          if (auditApp.users.cc.indexOf(auditApp.users.spinoff[key]) === -1) {
+            str += '<a href="/r/' + subreddit + '/about/contributors?user=' + auditApp.users.spinoff[key]+'" target="_blank">'+auditApp.users.spinoff[key] + '</a><br/>';
           }
         }
         auditApp.task.domstatus(str);
