@@ -4,14 +4,14 @@ javascript: (function () {
     i: 1,
     after: '',
     urls: {
-      approved: '/r/' + subreddit + '/about/contributors.json',
-      banned: '/r/' + subreddit + '/about/banned.json',
+      spinoff: '/r/' + subreddit + '/about/contributors.json',
+      cc: '/r/CenturyClub/about/contributors.json',
     },
-    taskList: ['approved', 'banned', 'merge'],
-    users: { approved: [], banned: []},
+    taskList: ['spinoff', 'cc', 'merge'],
+    users: { spinoff: [], cc: []},
     task: {
       init: function(task) {
-        if (task == 'approved' || task == 'banned') {
+        if (task == 'spinoff' || task == 'cc') {
           auditApp.task.list(task);
         } else {
           auditApp.task.merge();
@@ -49,10 +49,10 @@ javascript: (function () {
         });
       },
       merge: function () {
-        var str = 'Banned users in approved list:<br/>';
-        for (var key in auditApp.users.banned) {
-          if (auditApp.users.approved.indexOf(auditApp.users.banned[key]) !== -1) {
-            str += auditApp.users.banned[key] + '<br/>';
+        var str = 'Users in spinoff that aren\'t in CC:<br/>';
+        for (var key in auditApp.users.spinoff) {
+          if (auditApp.users.cc.indexOf(auditApp.users.spinoff[key]) !== -1) {
+            str += auditApp.users.spinoff[key] + '<br/>';
           }
         }
         auditApp.task.domstatus(str);
