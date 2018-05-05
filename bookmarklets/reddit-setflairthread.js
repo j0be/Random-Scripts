@@ -174,7 +174,7 @@ var flair = {
             }
           }
         } else {
-          console.log(fdata.requests[key].author + ' has a request with no responses');
+          alert(fdata.requests[key].author + ' has a request with no responses');
         }
 
         if (flair.tempArr.length > 1) {
@@ -195,12 +195,8 @@ var flair = {
           }
 
           break;
-        } else {
-          if (fdata.requests[key].children.length) {
-            fdata.requests[key].children[0].winner = true;
-          } else {
-            console.log(fdata.requests[key].author + ' has a request with no responses');
-          }
+        } else if (fdata.requests[key].children.length) {
+          fdata.requests[key].children[0].winner = true;
         }
       }
     }
@@ -313,13 +309,13 @@ var flair = {
       item = fdata.output[i];
       var tiestr = item.hadTie ? ' *' : '';
       if (item.request_link.length == 1) {
-        tablestr += '[' + item.author.replace(/_/g, '\\_') + '](' + base + '/_/' + item.request_link[0] + ')'+tiestr+'|';
+        tablestr += '[' + item.author.replace(/_/g, '\\_') + '](' + base + '/_/' + item.request_link[0] + ')' + tiestr + '|';
       } else if (item.request_link.length > 1) {
         tablestr += item.author.replace(/_/g, '\\_') + ' ';
         for (ii = 0; ii < item.request_link.length; ii++) {
           tablestr += '[[' + (ii + 1) + ']](' + base + '/_/' + item.request_link[ii] + ')';
         }
-        tablestr += tiestr+'|';
+        tablestr += tiestr + '|';
       } else {
         tablestr += item.author.replace(/_/g, '\_') + tiestr + '|';
       }
@@ -335,7 +331,7 @@ var flair = {
     }
     tablestr += (fdata.stats.ties > 0 ? '\n\\* had a tie that was resolved\n\n' : '');
 
-    tablestr +=  '---\n\n##Some stats: \n\n* ' + fdata.stats.requests + ' requests\n\n';
+    tablestr += '---\n\n##Some stats: \n\n* ' + fdata.stats.requests + ' requests\n\n';
     tablestr += '* ' + fdata.stats.attempts + ' attempts\n\n';
     tablestr += '* ' + fdata.stats.ties + ' ties\n\n';
     tablestr += '* ' + (fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2) + ' average attempt score\n\n';
@@ -360,7 +356,7 @@ var flair = {
         uh: fdata.modhash,
         renderstyle: 'json'
       };
-      
+
       var form_data = new FormData();
 
       for (var key in data) {
