@@ -268,7 +268,7 @@ var flair = {
 
           if (item.winner) {
             fdata.outputPrep[item.author].wins++;
-            fdata.outputPrep[request.author].flair_text = item.text.match(/\[.{,62}\]/) ? item.text.match(/\[.{,62}\]/)[0] : '[]';
+            fdata.outputPrep[request.author].flair_text = item.text.match(/\[.{0,62}\]/) ? item.text.match(/\[.{0,62}\]/)[0] : '[]';
             fdata.outputPrep[request.author].flair_link = item.id;
             if (fdata.outputPrep[item.author].win_link.indexOf(item.id) === -1) {
               fdata.outputPrep[item.author].win_link.push(item.id);
