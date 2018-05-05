@@ -163,14 +163,18 @@ var flair = {
           return (a.score > b.score ? -1 : (a.score < b.score ? 1 : 0));
         });
 
-        var children = fdata.requests[key].children,
-          highScore = children[0].score;
+        if (fdata.requests[key].children.length) {
+          var children = fdata.requests[key].children,
+            highScore = children[0].score;
 
-        for (i = 0; i < children.length; i++) {
-          if (children[i].score === highScore) {
-            fdata.requests[key].children[i].index = i;
-            flair.tempArr.push(children[i]);
+          for (i = 0; i < children.length; i++) {
+            if (children[i].score === highScore) {
+              fdata.requests[key].children[i].index = i;
+              flair.tempArr.push(children[i]);
+            }
           }
+        } else {
+          console.log(fdata.requests[key].author + ' has a request with no responses');
         }
 
         if (flair.tempArr.length > 1) {
@@ -192,7 +196,11 @@ var flair = {
 
           break;
         } else {
-          fdata.requests[key].children[0].winner = true;
+          if (fdata.requests[key].children.length) {
+            fdata.requests[key].children[0].winner = true;
+          } else {
+            console.log(fdata.requests[key].author + ' has a request with no responses');
+          }
         }
       }
     }
