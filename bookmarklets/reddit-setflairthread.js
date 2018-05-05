@@ -1,1 +1,383 @@
-javascript: (function() { app = { init: function() { if (!!$('.title-button.gold').length) { document.location = $('.title-button.gold').first().attr('href'); /* Redirect to 1500 comments */ return true; } app.setup.styles(); app.setup.dom(); app.setup.cleanup(); $('body').addClass('flair-initiliazed'); app.setup.expandComments(); }, setup: { styles: function() { if (!$('body').hasClass('flair-initiliazed')) { $('head').append('<style>' + '#flair_output {max-height: 80%; overflow-y: auto;text-align: center; padding:1em; position: fixed; min-width: 20%; min-height: 2em; background: #fff; box-shadow: 0 0 70px #000; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 5;}' + '#siteTable + .commentarea .flair-winner {background: rgba(0,255,0,.5) !important;} ' + '#siteTable + .commentarea .flair-tie {background: rgba(255,180,0,.5) !important;} ' + '#siteTable + .commentarea .comment.dupe {outline: 3px solid rgba(255,0, 0,.5) !important;} ' + '#siteTable + .commentarea .comment.noflairs>.entry {outline: 3px solid rgba(0,255,0,.5) !important;}' + '</style>'); } }, dom: function() { if (!$('body').hasClass('flair-initiliazed')) { app.setup.cleanup(); $('body').click(function() { $('#flair_output').remove(); }); } if (!$('#flair_output').length) { $('body').append('<div id="flair_output"></div>'); $('#flair_output').click(function(e) { e.preventDefault(); e.stopImmediatePropagation(); }); } }, cleanup: function() { $('.comment.collapsed>.entry>.tagline>.expand').click(); /* Click all expand buttons */ $('.commentarea>.sitetable>.thing>.child .thing>.child').remove(); /* Remove third level comments */ $('.RESUserTag,.voteWeight,.expando-button.toggleImage,.usernote-button').remove(); /* Remove RES shit */ $('.thing.spam').remove(); /* Remove Moderated shit */ }, expandComments: function() { app.setup.cleanup(); if ($('.morecomments').length > 0) { app.output('Expanding comments: ' + $('.morecomments').length + ' links left to click'); evt = document.createEvent("MouseEvents"); evt.initMouseEvent("click", true, true, window, 1, 0, 0, 0, 0, false, false, false, false, 0, null); $('.morecomments a').first()[0].dispatchEvent(evt); app.setup.cleanup(); setTimeout(app.setup.expandComments, 200); } else { app.output(''); app.setup.cleanup(); app.process.prepStream(); } } }, output: function(str) { if (!$('#flair_output').length) { $('body').append('<div id="flair_output"></div>'); } $('#flair_output').html(str); }, validation: { noattempts: function() { $('.commentarea>.sitetable>.thing').each(function() { if ($(this).find('.child .tagline').length === 0) { $(this).addClass('noflairs'); } }); if ($('.noflairs').length !== 0) { alert('Some people are missing flairs'); } }, ties: function() { $('.thing.isTied').removeClass('isTied'); $('.commentarea>.sitetable>.thing').each(function() { topScore = -999; $(this).find('.child .tagline .score:visible').each(function() { thisScore = parseFloat($(this).text().replace(/\s+points?/g, '')); if (thisScore > topScore) { topScore = thisScore; $(this).closest('.thing').addClass('flair-winner').prevAll('.thing').removeClass('flair-winner flair-tie'); } else if (thisScore == topScore) { $(this).closest('.thing').addClass('flair-tie').prevAll('.thing').addClass('flair-tie').removeClass('flair-winner'); } }); }); $('.commentarea>.sitetable>.thing>.child .thing').each(function() { if (!($(this).hasClass('flair-tie') || $(this).hasClass('flair-winner'))) { $(this).hide(); } }); if ($('.flair-tie').length !== 0) { $('.flair-tie').parent().closest('.thing').addClass('isTied'); alert('There are ' + $('.thing.isTied').length + ' ties'); } }, dupes: function() { $('.comment.dupe').removeClass('dupe'); $('.commentarea>.sitetable>.thing>.entry>.tagline .author').each(function() { $(this).addClass('user-' + $(this).text()); }); $('.commentarea>.sitetable>.thing>.entry>.tagline .author').each(function() { var user = $(this).text(); if ($('.user-' + user).length > 1) { $(this).closest('.comment').addClass('dupe'); console.log('dupe for ' + user); } }); if ($('.comment.dupe').length > 0) { alert('Some people requested flair more than once'); } } }, process: { prepStream: function() { app.process.data = {}; app.process.attempts.sortem(); app.setup.cleanup(); $('.flair-tie,.flair-winner,.noflairs').removeClass('flair-tie flair-winner noflairs'); app.validation.noattempts(); app.validation.ties(); app.validation.dupes(); app.finalize = confirm('Would you like to set flairs?'); app.process.attempts.get(); if (app.finalize === true) { app.process.submit.init(); } else { app.process.showOutput(); } }, attempts: { sortem: function() { $('.commentarea > .sitetable > .thing > .child > .sitetable').each(function() { el = $(this); el.children('.thing').each(function() { $(this).attr('data-score', $(this).find('.score:visible').text().replace(/[^\d-]/g, '')); if ($(this).hasClass('flair-tie') && !!$(this).find('.upmod').length) { $(this).find('.score:visible').text(parseFloat($(this).attr('data-score')) + 1); } }); el.children('.spam').each(function() { $(this).find('.score:visible').text('-100'); }); }); }, get: function() { $('.commentarea > .sitetable > .thing ').each(function() { el = $(this).find('> .child > .sitetable'); request_el = el.closest('.thing'); requestee = request_el.hasClass('deleted') ? '' : request_el.find('.author').first().text(); app.process.data[requestee] = app.process.data[requestee] || {}; app.process.data[requestee]['responses'] = app.process.data[requestee]['responses'] || 0; app.process.data[requestee]['responses'] += el.children('.thing').length; el.children('.thing').each(function(i) { attemptee = $(this).hasClass('deleted') ? '' : $(this).find('.author').first().text(); flairText = $(this).find('.usertext-body .md p').first().text(); if (flairText.match(/\[.*\]/) && !$(this).hasClass('deleted')) { app.process.data[attemptee] = app.process.data[attemptee] || {}; app.process.data[attemptee]['attempts'] = !app.process.data[attemptee].hasOwnProperty('attempts') ? 1 : app.process.data[attemptee]['attempts'] + 1; if ($(this).hasClass('flair-winner')) { app.process.data[requestee]['flairText'] = flairText; app.process.data[requestee]['flairClass'] = !!request_el.find('.flair').length ? request_el.find('.flair').attr('class').replace('flair ', '') : ''; app.process.data[requestee]['flairLink'] = '/r/CenturyClub/comments/' + $('#siteTable .thing').first().attr('id').replace(/.*_/, '') + '/-/' + $(this).attr('id').replace(/.*_/, '') + '?context=1'; app.process.data[requestee]['requests'] = app.process.data[requestee]['requests'] + 1 || 1; app.process.data[attemptee]['successes'] = !app.process.data[attemptee].hasOwnProperty('successes') ? 1 : app.process.data[attemptee]['successes'] + 1; app.process.data[attemptee]['permalinks'] = app.process.data[attemptee]['permalinks'] || ''; app.process.data[attemptee]['permalinks'] += '[[' + app.process.data[attemptee]['successes'] + ']](/r/CenturyClub/comments/' + $('#siteTable .thing').first().attr('id').replace(/.*_/, '') + '/-/' + $(this).attr('id').replace(/.*_/, '') + '?context=1) '; } } }); }); } }, submit: { init: function() { my_hash = r.config.modhash; this_subreddit = r.config.cur_listing; app.process.toSubmit = []; for (key in app.process.data) { item = app.process.data[key]; if (item['flairText']) { item.target = key; app.process.toSubmit.push(item); } } app.process.submit.next(); }, next: function() { if (app.process.toSubmit.length > 0) { item = app.process.toSubmit[0]; $('#flair_output').text('Setting flair for ' + item['target']); $.ajax({ url: '/api/flair', data: { name: item['target'], text: item['flairText'], css_class: item['flairClass'], id: '#flair-xxxxx', r: this_subreddit, uh: my_hash, renderstyle: 'html' }, method: 'POST' }).then(function() { $('#flair_output').text('Successfully set flair for ' + app.process.toSubmit[0]['target']); app.process.toSubmit.shift(); app.process.submit.next(); }, function() { app.process.submit.next(); }); } else { app.process.showOutput(); } } }, showOutput: function() { $('#flair_output').text(''); sortable = []; str = '#Inside the Flair Thread\n\n***Here\'s the breakdown:***\n\nUser|Responses|Successful Flairs|Attempted Flairs|Weighted Successes|Success Permalinks\n:--|--:|--:|--:|--:|:--\n'; for (key in app.process.data) { item = app.process.data[key]; item['successes'] = item['successes'] || 0; sortable.push({ name: key.replace(/\_/g, '\\_'), responses: item['responses'], requests: item['requests'], flairLink: item['flairLink'], successes: item['attempts'] ? item['successes'] : '-', attempts: item['attempts'] ? item['attempts'] : '-', weighted: item['attempts'] ? (item['successes'] * (item['successes'] / item['attempts'])).toFixed(2) : -4000, permalinks: item['attempts'] ? item['permalinks'] : 'moocher', }); } sortable = sortable.sort(function(a, b) { return parseFloat(a.weighted) > parseFloat(b.weighted) ? -1 : parseFloat(a.weighted) < parseFloat(b.weighted) ? 1 : a.successes > b.successes ? 1 : a.successes < b.successes ? -1 : a.attempts > b.attempts ? 1 : a.attempts < b.attempts ? -1 : a.name.toLowerCase() > b.name.toLowerCase() ? 1 : a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 0; }); count = 0; attempts = 0; for (i = 0; i < sortable.length; i++) { item = sortable[i]; str += (item['name'] === '' ? '[deleted]' : item['flairLink'] ? '[' + item['name'] + '](' + item['flairLink'] + ')' : item['name']) + (item['requests'] > 1 ? ' x' + item['requests'] : '') + '|' + (item['responses'] || '') + '|' + item['successes'] + '|' + item['attempts'] + '|' + (item['permalinks'] === 'moocher' ? '-' : item['weighted']) + '|' + (item['permalinks'] || '') + '\n'; if (item['permalinks'] !== 'moocher') { count += item['successes']; attempts += item['attempts']; } } str += ' | |' + count + '|' + attempts + '| | | \n\n'; str += '---\n\n [Here\'s a link to the flair thread](/r/CenturyClub/comments/' + $('#siteTable .thing').first().attr('id').replace(/.*_/, '') + ')'; $('#flair_output').append('<textarea style="width:100%;">' + str + '</textarea>'); console.log('done'); } } }; app.init(); })();
+var fdata = typeof fdata !== 'undefined' && fdata.gathered ? fdata : {
+  requests: {},
+  output: [],
+  outputPrep: {},
+  more: [],
+  stats: {
+    requests: 0,
+    attempts: 0,
+    attemptscore: 0,
+    ties: 0,
+    morelinksclicked: 0,
+  }
+};
+
+var flair = {
+  thread_id: document.location.href.split('/')[6],
+  init: function () {
+    var styler,
+      str = '#flair-output { color: #000; position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); background: #fff; padding: 15px; z-index: 999; max-height: 80vh; overflow: auto; }';
+    str += '#flair-output button { width: 100%; margin: .5em 0; display: block; text-align: left; }';
+    str += '#flair-output button .author { float: left; opacity: .6; }';
+    str += '#flair-output button .points { float: right; opacity: .6; }';
+    str += '#flair-output button .text { float: left; clear: both; font-size: 1.2em; margin-top: .3em;}';
+    if (!document.getElementById('styler')) {
+      styler = document.createElement('style');
+      styler.setAttribute('id', 'styler');
+      styler.innerHTML = str;
+      document.head.appendChild(styler);
+    } else {
+      styler = document.getElementById('styler');
+      styler.innerHTML = str;
+    }
+
+    fdata.output = [];
+    fdata.outputPrep = {};
+
+    if (!fdata.gathered) {
+      flair.get.allComments();
+      return 'Getting all comments';
+    }
+    flair.checkTies();
+    return 'skipping load';
+  },
+  title: function (str) {
+    document.title = str;
+    flair.output(str);
+  },
+  output: function (str) {
+    var output;
+    if (!document.getElementById('flair-output')) {
+      output = document.createElement('div');
+      output.setAttribute('id', 'flair-output');
+      output.innerHTML = str;
+      document.body.appendChild(output);
+    } else {
+      output = document.getElementById('flair-output');
+      output.innerHTML = str;
+    }
+  },
+  get: {
+    allComments: function () {
+      flair.title('Getting base comments');
+      fetch('/r/CenturyClub/comments/' + flair.thread_id + '/x/.json?limit=1500', {
+        credentials: 'include',
+        headers: {
+          'cookie': document.cookie
+        },
+        referrer: document.location.protocol + '//' + document.location.host
+      }).then(function (response) {
+        return response.json();
+      }).then(function (data) {
+        fdata.modhash = data[1].data.modhash;
+        flair.apply(data[1].data.children);
+        flair.get.more();
+      });
+    },
+    more: function () {
+      if (fdata.more.length) {
+        fdata.gathered = false;
+        flair.title('Fetching ' + fdata.more[0] + ': ' + fdata.more.length + ' remaining');
+        fetch('/r/CenturyClub/comments/' + flair.thread_id + '/x/' + fdata.more[0] + '.json?limit=1500', {
+          credentials: 'include',
+          headers: {
+            'cookie': document.cookie
+          },
+          referrer: document.location.protocol + '//' + document.location.host
+        }).then(function (response) {
+          return response.json();
+        }).then(function (data) {
+          fdata.modhash = data[1].data.modhash;
+          fdata.stats.morelinksclicked++;
+          fdata.more.shift();
+          var items = data[1].data.children;
+          if (items[0]) {
+            flair.apply(items);
+          }
+          flair.get.more();
+        });
+      } else {
+        fdata.gathered = true;
+        flair.checkTies();
+      }
+    }
+  },
+  apply: function (data) {
+    for (var i = 0; i < data.length; i++) {
+      if (data[i].kind === 'more') {
+        fdata.more = fdata.more.concat(data[i].data.children);
+      } else {
+        var item = data[i].data;
+        var parentid = item.parent_id.replace(/.*?_/, '');
+
+        if (fdata.more.indexOf(item.id) !== -1) {
+          fdata.more.splice(fdata.more.indexOf(item.id), 1);
+        }
+
+        if (item.parent_id === item.link_id) {
+          if (!fdata.requests[item.id]) {
+            fdata.requests[item.id] = {
+              id: item.id,
+              author: item.author,
+              class: item.author_flair_css_class,
+              children: [],
+            };
+          }
+
+          if (item.replies && item.replies.data.children) {
+            flair.apply(item.replies.data.children);
+          }
+        } else if (fdata.requests[parentid]) {
+          fdata.requests[parentid].children.push({
+            id: item.id,
+            author: item.author,
+            score: item.score,
+            text: item.body,
+          });
+        } else {
+          console.log('Somehow I have a child comment with no parent');
+        }
+      }
+    }
+  },
+  checkTies: function () {
+    var i, key, str;
+    flair.title('Breaking ties');
+
+    function tiebreaker(event) {
+      var el = event.currentTarget,
+        parent = el.getAttribute('data-parent'),
+        index = el.getAttribute('data-index');
+
+      fdata.requests[parent].tieBroken = true;
+      fdata.requests[parent].children[index].winner = true;
+
+      flair.checkTies();
+    }
+
+    var thereAreTies = false;
+    for (key in fdata.requests) {
+      if (fdata.requests.hasOwnProperty(key) && !fdata.requests[key].tieBroken) {
+        flair.tempArr = [];
+        fdata.requests[key].children = fdata.requests[key].children.sort(function (a, b) {
+          return (a.score > b.score ? -1 : (a.score < b.score ? 1 : 0));
+        });
+
+        var children = fdata.requests[key].children,
+          highScore = children[0].score;
+
+        for (i = 0; i < children.length; i++) {
+          if (children[i].score === highScore) {
+            fdata.requests[key].children[i].index = i;
+            flair.tempArr.push(children[i]);
+          }
+        }
+
+        if (flair.tempArr.length > 1) {
+          thereAreTies = true;
+          fdata.stats.ties++;
+
+          str = '<div class="parent_author">Flair for /u/' + fdata.requests[key].author + ' has a tie. Choose a winner.</div>';
+          for (i = 0; i < flair.tempArr.length; i++) {
+            fdata.requests[key].children[flair.tempArr[i].index].tied = true;
+            str += '<button class="tiebreaker" data-parent="' + key + '" data-index="' + flair.tempArr[i].index + '"><div><span class="author">/u/' + flair.tempArr[i].author + '</span> <span class="points">' + flair.tempArr[i].score + ' points</span></div><div class="text">' + flair.tempArr[i].text + '</div></button>';
+          }
+          flair.output(str);
+
+          var buttons = document.getElementsByClassName('tiebreaker');
+
+          for (i = 0; i < buttons.length; i++) {
+            buttons[i].addEventListener('click', tiebreaker);
+          }
+
+          break;
+        } else {
+          fdata.requests[key].children[0].winner = true;
+        }
+      }
+    }
+
+    if (!thereAreTies) {
+      flair.resolveData();
+    }
+  },
+  resolveData: function () {
+    var key, i, request, item;
+    var baseUserData = {
+      attempts: 0,
+      wins: 0
+    };
+
+    fdata.stats.requests = 0;
+    fdata.stats.attempts = 0;
+    fdata.stats.attemptscore = 0;
+
+    for (key in fdata.requests) {
+      if (fdata.requests.hasOwnProperty(key)) {
+        fdata.stats.requests++;
+        request = fdata.requests[key];
+
+        if (!fdata.outputPrep[request.author]) {
+          fdata.outputPrep[request.author] = {
+            attempts: 0,
+            wins: 0,
+            request_link: [],
+            attempt_link: [],
+            win_link: []
+          };
+        }
+
+        fdata.outputPrep[request.author].author = request.author;
+        fdata.outputPrep[request.author].replies = request.children.length;
+        fdata.outputPrep[request.author].class = request.class;
+        fdata.outputPrep[request.author].hadTie = !!request.tieBroken;
+
+        if (fdata.outputPrep[request.author].request_link.indexOf(request.id) === -1) {
+          fdata.outputPrep[request.author].request_link.push(request.id);
+        }
+
+        for (i = 0; i < request.children.length; i++) {
+          item = request.children[i];
+          fdata.stats.attempts++;
+          fdata.stats.attemptscore += item.score;
+
+          if (!fdata.outputPrep[item.author]) {
+            fdata.outputPrep[item.author] = {
+              attempts: 0,
+              wins: 0,
+              request_link: [],
+              attempt_link: [],
+              win_link: []
+            };
+          }
+
+          fdata.outputPrep[item.author].attempts++;
+          fdata.outputPrep[item.author].author = item.author;
+
+          if (fdata.outputPrep[item.author].attempt_link.indexOf(item.id) === -1) {
+            fdata.outputPrep[item.author].attempt_link.push(item.id);
+          }
+
+          if (item.winner) {
+            fdata.outputPrep[item.author].wins++;
+            fdata.outputPrep[request.author].flair_text = item.text.match(/\[.{,62}\]/) ? item.text.match(/\[.{,62}\]/)[0] : '[]';
+            fdata.outputPrep[request.author].flair_link = item.id;
+            if (fdata.outputPrep[item.author].win_link.indexOf(item.id) === -1) {
+              fdata.outputPrep[item.author].win_link.push(item.id);
+            }
+          }
+        }
+      }
+    }
+
+    for (key in fdata.outputPrep) {
+      item = fdata.outputPrep[key];
+      item.weighted = item.attempts > 0 ? item.wins * (item.wins / item.attempts) : 0;
+      item.moocher = item.attempts == 0;
+      fdata.output.push(item);
+    }
+
+    fdata.output = fdata.output.sort(function (a, b) {
+      return (a.weighted > b.weighted ? -1 :
+        (a.weighted < b.weighted ? 1 :
+          (a.moocher > b.moocher ? 1 :
+            (a.moocher < b.moocher ? -1 :
+              (a.attempts > b.attempts ? 1 :
+                (a.attempts < b.attempts ? -1 :
+                  (a.author.toLowerCase() > b.author.toLowerCase() ? 1 :
+                    (a.author.toLowerCase() < b.author.toLowerCase() ? -1 : 0))))))));
+    });
+
+    flair.outputer();
+
+    if (confirm('Would you like to set flairs?')) {
+      fdata.flairsetter = fdata.output.slice();
+      flair.setFlairs();
+    }
+  },
+  outputer: function () {
+    var str = '#In this month\'s flair thread: \n\n';
+    str += '* ' + fdata.stats.requests + ' requests\n\n';
+    str += '* ' + fdata.stats.attempts + ' attempts\n\n';
+    str += '* ' + fdata.stats.ties + ' ties\n\n';
+    str += '* ' + (fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2) + ' average attempt score\n\n';
+    str += '* clicked ' + (fdata.stats.morelinksclicked) + ' "more" links\n\n';
+
+    var base = '/r/CenturyClub/comments/' + flair.thread_id;
+    var tablestr = 'User|Successful Flairs|Attempted Flairs|Weighted Successes|Success Permalinks\n';
+    tablestr += ':--|--:|--:|--:|:--\n';
+    var ii;
+    for (i = 0; i < fdata.output.length; i++) {
+      item = fdata.output[i];
+      if (item.request_link.length == 1) {
+        tablestr += '[' + item.author.replace(/_/g, '\\_') + '](' + base + '/_/' + item.request_link[0] + ')|';
+      } else if (item.request_link.length > 1) {
+        tablestr += item.author.replace(/_/g, '\\_') + ' ';
+        for (ii = 0; ii < item.request_link.length; ii++) {
+          tablestr += '[[' + (ii + 1) + ']](' + base + '/_/' + item.request_link[ii] + ')';
+        }
+        tablestr += '|';
+      } else {
+        tablestr += item.author.replace(/_/g, '\_') + '|';
+      }
+
+      tablestr += (item.attempts > 0 ? item.wins : '-') + '|';
+      tablestr += (item.attempts > 0 ? item.attempts : '-') + '|';
+      tablestr += (item.attempts > 0 ? item.weighted.toFixed(2) : '-') + '|';
+
+      for (ii = 0; ii < item.win_link.length; ii++) {
+        tablestr += '[[' + (ii + 1) + ']](' + base + '/_/' + item.win_link[ii] + '?context=1)';
+      }
+      tablestr += '\n';
+    }
+
+    tablestr += '\n\n[Here\'s a link to the flair thread](' + base + ')\n';
+
+    str = '<textarea>' + str + tablestr + '</textarea>';
+    flair.title('Done');
+    flair.output(str);
+  },
+  setFlairs: function () {
+    if (fdata.flairsetter.length && fdata.outputPrep[fdata.flairsetter[0].author].flair_text) {
+      flair.title('Setting flair for ' + fdata.flairsetter[0].author);
+
+      var data = {
+        name: fdata.flairsetter[0].author,
+        text: fdata.outputPrep[fdata.flairsetter[0].author].flair_text,
+        css_class: fdata.flairsetter[0].author == fdata.output[0].author ? 'monthlywinner' : '',
+        id: '#flair-xxxxx',
+        r: r.config.cur_listing,
+        uh: fdata.modhash,
+        renderstyle: 'json'
+      };
+      
+      var form_data = new FormData();
+
+      for (var key in data) {
+        form_data.append(key, data[key]);
+      }
+
+      fetch('/api/flair', {
+        credentials: 'include',
+        headers: {
+          'cookie': document.cookie
+        },
+        body: form_data,
+        method: 'POST',
+        referrer: document.location.protocol + '//' + document.location.host
+      }).then(function (response) {
+        return response.json();
+      }).then(function (data) {
+        fdata.flairsetter.shift();
+        flair.setFlairs();
+      });
+    } else if (fdata.flairsetter.length) {
+      fdata.flairsetter.shift();
+      flair.setFlairs();
+    } else {
+      flair.outputer();
+    }
+  }
+};
+
+flair.init();
