@@ -288,37 +288,32 @@ var flair = {
                     (a.author.toLowerCase() < b.author.toLowerCase() ? -1 : 0))))))));
     });
 
-    flair.outputer();
-
     if (confirm('Would you like to set flairs?')) {
       fdata.flairsetter = fdata.output.slice();
       flair.setFlairs();
+    } else {
+      flair.outputer();
     }
   },
   outputer: function () {
     var str = '#In this month\'s flair thread: \n\n';
-    str += '* ' + fdata.stats.requests + ' requests\n\n';
-    str += '* ' + fdata.stats.attempts + ' attempts\n\n';
-    str += '* ' + fdata.stats.ties + ' ties\n\n';
-    str += '* ' + (fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2) + ' average attempt score\n\n';
-    str += '* clicked ' + (fdata.stats.morelinksclicked) + ' "more" links\n\n';
-
     var base = '/r/CenturyClub/comments/' + flair.thread_id;
     var tablestr = 'User|Successful Flairs|Attempted Flairs|Weighted Successes|Success Permalinks\n';
     tablestr += ':--|--:|--:|--:|:--\n';
     var ii;
     for (i = 0; i < fdata.output.length; i++) {
       item = fdata.output[i];
+      var tiestr = item.hadTie ? ' *' : '';
       if (item.request_link.length == 1) {
-        tablestr += '[' + item.author.replace(/_/g, '\\_') + '](' + base + '/_/' + item.request_link[0] + ')|';
+        tablestr += '[' + item.author.replace(/_/g, '\\_') + '](' + base + '/_/' + item.request_link[0] + ')'+tiestr+'|';
       } else if (item.request_link.length > 1) {
         tablestr += item.author.replace(/_/g, '\\_') + ' ';
         for (ii = 0; ii < item.request_link.length; ii++) {
           tablestr += '[[' + (ii + 1) + ']](' + base + '/_/' + item.request_link[ii] + ')';
         }
-        tablestr += '|';
+        tablestr += tiestr+'|';
       } else {
-        tablestr += item.author.replace(/_/g, '\_') + '|';
+        tablestr += item.author.replace(/_/g, '\_') + tiestr + '|';
       }
 
       tablestr += (item.attempts > 0 ? item.wins : '-') + '|';
@@ -330,8 +325,15 @@ var flair = {
       }
       tablestr += '\n';
     }
+    tablestr += (fdata.stats.ties > 0 ? '\n\\* had a tie that was resolved\n\n' : '');
 
-    tablestr += '\n\n[Here\'s a link to the flair thread](' + base + ')\n';
+    tablestr +=  'Some stats: \n\n* ' + fdata.stats.requests + ' requests\n\n';
+    tablestr += '* ' + fdata.stats.attempts + ' attempts\n\n';
+    tablestr += '* ' + fdata.stats.ties + ' ties\n\n';
+    tablestr += '* ' + (fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2) + ' average attempt score\n\n';
+    tablestr += '* clicked ' + (fdata.stats.morelinksclicked) + ' "more" links\n\n';
+
+    tablestr += '\n\n---\n\n[Here\'s a link to the flair thread](' + base + ')\n';
 
     str = '<textarea>' + str + tablestr + '</textarea>';
     flair.title('Done');
