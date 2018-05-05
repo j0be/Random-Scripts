@@ -327,7 +327,7 @@ var flair = {
     }
     tablestr += (fdata.stats.ties > 0 ? '\n\\* had a tie that was resolved\n\n' : '');
 
-    tablestr +=  'Some stats: \n\n* ' + fdata.stats.requests + ' requests\n\n';
+    tablestr +=  '---\n\n##Some stats: \n\n* ' + fdata.stats.requests + ' requests\n\n';
     tablestr += '* ' + fdata.stats.attempts + ' attempts\n\n';
     tablestr += '* ' + fdata.stats.ties + ' ties\n\n';
     tablestr += '* ' + (fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2) + ' average attempt score\n\n';
