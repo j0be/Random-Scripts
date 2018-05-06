@@ -326,7 +326,7 @@ javascript: (function () {
         tablestr += (item.attempts > 0 ? item.weighted.toFixed(2) : '-') + '|';
 
         for (ii = 0; ii < item.win_link.length; ii++) {
-          tablestr += '[[' + (ii + 1) + ']](' + base + '/_/' + item.win_link[ii] + '?context=1)';
+          tablestr += '[[' + (ii + 1) + ']](' + base + '/_/' + item.win_link[ii] + '?context=1) ';
         }
         tablestr += '\n';
       }
