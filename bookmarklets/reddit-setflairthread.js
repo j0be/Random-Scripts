@@ -336,6 +336,7 @@ javascript: (function () {
       tablestr += '* ' + fdata.stats.attempts + ' attempts\n\n';
       tablestr += '* ' + fdata.stats.ties + ' ties\n\n';
       tablestr += '* ' + (fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2) + ' average attempt score\n\n';
+      tablestr += '* ' + (fdata.stats.attempts / fdata.stats.requests).toFixed(2) + ' average attempts per reply\n\n';
       tablestr += '* clicked ' + (fdata.stats.morelinksclicked) + ' "more" links\n\n';
 
       tablestr += '\n\n---\n\n[Here\'s a link to the flair thread](' + base + ')\n';
