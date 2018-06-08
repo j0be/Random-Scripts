@@ -10,6 +10,14 @@ javascript: (function () {
       attemptscore: 0,
       ties: 0,
       morelinksclicked: 0,
+    },
+    times: {
+      moreStart: new Date(),
+      moreEnd: new Date(),
+      tieStart: new Date(),
+      tieEnd: new Date(),
+      applyStart: new Date(),
+      applyEnd: new Date(),
     }
   };
 
@@ -36,6 +44,7 @@ javascript: (function () {
       fdata.outputPrep = {};
 
       if (!fdata.gathered) {
+        fdata.times.moreStart = new Date();
         flair.get.allComments();
         return 'Getting all comments';
       }
@@ -98,7 +107,9 @@ javascript: (function () {
             flair.get.more();
           });
         } else {
+          fdata.times.moreEnd = new Date();
           fdata.gathered = true;
+          fdata.times.tieStart = new Date();
           flair.checkTies();
         }
       }
@@ -203,15 +214,12 @@ javascript: (function () {
       }
 
       if (!thereAreTies) {
+        fdata.times.tieEnd = new Date();
         flair.resolveData();
       }
     },
     resolveData: function () {
       var key, i, request, item;
-      var baseUserData = {
-        attempts: 0,
-        wins: 0
-      };
 
       fdata.stats.requests = 0;
       fdata.stats.attempts = 0;
@@ -295,6 +303,7 @@ javascript: (function () {
 
       if (confirm('Would you like to set flairs?')) {
         fdata.flairsetter = fdata.output.slice();
+        fdata.times.applyStart = new Date();
         flair.setFlairs();
       } else {
         flair.outputer();
@@ -332,12 +341,13 @@ javascript: (function () {
       }
       tablestr += (fdata.stats.ties > 0 ? '\n\\* had a tie that was resolved\n\n' : '');
 
-      tablestr += '---\n\n##Some stats: \n\n* ' + fdata.stats.requests + ' requests\n\n';
+      tablestr += '---\n\n##Some stats: \n\n';
+      tablestr += '* clicked ' + (fdata.stats.morelinksclicked) + ' "more" links' + flair.diff('loaded', fdata.times.moreStart, fdata.times.moreEnd) + '\n\n';
+      tablestr += '* ' + fdata.stats.ties + ' ties' + flair.diff('resolved', fdata.times.tieStart, fdata.times.tieEnd) + '\n\n';
+      tablestr += '* ' + fdata.stats.requests + ' requestss' + flair.diff('applied', fdata.times.applyStart, fdata.times.applyEnd) + '\n\n';
       tablestr += '* ' + fdata.stats.attempts + ' attempts\n\n';
-      tablestr += '* ' + fdata.stats.ties + ' ties\n\n';
       tablestr += '* ' + (fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2) + ' average attempt score\n\n';
       tablestr += '* ' + (fdata.stats.attempts / fdata.stats.requests).toFixed(2) + ' average attempts per reply\n\n';
-      tablestr += '* clicked ' + (fdata.stats.morelinksclicked) + ' "more" links\n\n';
 
       tablestr += '\n\n---\n\n[Here\'s a link to the flair thread](' + base + ')\n';
 
@@ -383,8 +393,20 @@ javascript: (function () {
         fdata.flairsetter.shift();
         flair.setFlairs();
       } else {
+        fdata.times.applyEnd = new Date();
         flair.outputer();
       }
+    },
+    diff: function (label, start, end) {
+      var diff = Math.round((end.getTime() - start.getTime())/1000);
+      if (diff == 0) {
+        return '';
+      }
+
+      var minutes = Math.floor(diff / 60),
+        seconds = diff - (minutes * 60);
+      
+      return ' (' + label + ' in ' + (minutes > 0 ? minutes + ':' : '') + seconds + ')';
     }
   };
 
