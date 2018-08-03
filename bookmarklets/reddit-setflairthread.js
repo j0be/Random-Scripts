@@ -310,7 +310,7 @@ javascript: (function () {
                       (a.author.toLowerCase() < b.author.toLowerCase() ? -1 : 0))))))));
       });
 
-      fdata.stats.newUsers = fdata.stats.newUsers.sort();
+      fdata.stats.newUsers = flair.sort(fdata.stats.newUsers);
 
       if (confirm('Would you like to set flairs?')) {
         fdata.flairsetter = fdata.output.slice();
@@ -351,7 +351,7 @@ javascript: (function () {
         tablestr += (item.attempts > 0 ? item.attempts : '-') + '|';
         tablestr += (item.attempts > 0 ? item.weighted.toFixed(2) : '-') + '|';
 
-        item.win_link = item.win_link.sort();
+        item.win_link = flair.sort(item.win_link);
         for (ii = 0; ii < item.win_link.length; ii++) {
           tablestr += '[' + item.win_link[ii].split(',')[0] + '](' + base + '/_/' + item.win_link[ii].split(',')[1] + '?context=1)' + (ii + 1 < item.win_link.length ? ', ' : '');
         }
@@ -428,6 +428,11 @@ javascript: (function () {
         fdata.times.applyEnd = new Date();
         flair.outputer();
       }
+    },
+    sort: function(arr) {
+      return arr.sort(function (a,b) {
+        return (a.toLowerCase > b.toLowerCase ? -1 : (a.toLowerCase < b.toLowerCase ? 1 : 0));
+      });
     },
     decode: function (str) {
       return $ && $("<div/>").html($("<div/>").html(str).text()).text().trim();
