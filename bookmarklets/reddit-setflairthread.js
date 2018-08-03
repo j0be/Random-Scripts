@@ -130,6 +130,7 @@ javascript: (function () {
 
           if (item.parent_id === item.link_id) {
             if (!fdata.requests[item.id] && !item.removed && !item.spam) {
+              console.log(item.author_flair_text, !item.author_flair_text);
               fdata.requests[item.id] = {
                 id: item.id,
                 author: item.author,
@@ -147,7 +148,7 @@ javascript: (function () {
               id: item.id,
               author: item.author,
               score: item.score,
-              text: flair.decode(item.body_html) || item.body
+              text: flair.sanitize(flair.decode(item.body_html)) || item.body
             });
           } else {
             console.log('Somehow I have a child comment with no parent');
@@ -284,8 +285,8 @@ javascript: (function () {
 
               fdata.outputPrep[request.author].flair_text = item.text.match(/\[.{0,62}\]/) ? item.text.match(/\[.{0,62}\]/)[0] : '[]';
               fdata.outputPrep[request.author].flair_link = item.id;
-              if (fdata.outputPrep[item.author].win_link.indexOf(item.id) === -1) {
-                fdata.outputPrep[item.author].win_link.push(item.id);
+              if (fdata.outputPrep[item.author].win_link.indexOf(request.author + ',' + item.id) === -1) {
+                fdata.outputPrep[item.author].win_link.push(request.author + ',' + item.id);
               }
             }
           }
@@ -351,8 +352,9 @@ javascript: (function () {
         tablestr += (item.attempts > 0 ? item.attempts : '-') + '|';
         tablestr += (item.attempts > 0 ? item.weighted.toFixed(2) : '-') + '|';
 
+        item.win_link = item.win_link.sort();
         for (ii = 0; ii < item.win_link.length; ii++) {
-          tablestr += '[[' + (ii + 1) + ']](' + base + '/_/' + item.win_link[ii] + '?context=1) ';
+          tablestr += '[' + item.win_link[ii].split(',')[0] + '](' + base + '/_/' + item.win_link[ii].split(',')[1] + '?context=1)' + (ii + 1 < item.win_link.length ? ', ' : '');
         }
         tablestr += '\n';
       }
@@ -361,7 +363,7 @@ javascript: (function () {
 
       tablestr += '---\n\n##Some stats: \n\n';
       tablestr += '* clicked ' + fdata.stats.morelinksclicked + ' "more" links\n';
-      tablestr += ' * ' + flair.diff('Loaded all comments', fdata.times.moreStart, fdata.times.moreEnd, fdata.stats.morelinksclicked) + '\n\n';
+      tablestr += ' * ' + flair.diff('Loaded all comments', fdata.times.moreStart, fdata.times.moreEnd, fdata.stats.morelinksclicked + 1) + '\n\n';
 
       tablestr += '* ' + fdata.stats.ties + ' ties\n';
       tablestr += ' * ' + flair.diff('Resolved ties', fdata.times.tieStart, fdata.times.tieEnd, fdata.stats.ties) + '\n\n';
