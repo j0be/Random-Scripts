@@ -431,7 +431,7 @@ javascript: (function () {
     },
     sort: function(arr) {
       return arr.sort(function (a,b) {
-        return (a.toLowerCase > b.toLowerCase ? -1 : (a.toLowerCase < b.toLowerCase ? 1 : 0));
+        return (a.toLowerCase() > b.toLowerCase() ? -1 : (a.toLowerCase() < b.toLowerCase() ? 1 : 0));
       });
     },
     decode: function (str) {
