@@ -147,7 +147,7 @@ javascript: (function () {
               id: item.id,
               author: item.author,
               score: item.score,
-              text: flair.sanitize(flair.decode(item.body_html)) || item.body
+              text: flair.decode(item.body_html) || item.body
             });
           } else {
             console.log('Somehow I have a child comment with no parent');
