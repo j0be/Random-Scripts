@@ -8,8 +8,10 @@ javascript: (function () {
       requests: 0,
       attempts: 0,
       attemptscore: 0,
+      winscore: 0,
       ties: 0,
       morelinksclicked: 0,
+      newUsers: [],
     },
     times: {
       moreStart: new Date(),
@@ -127,11 +129,13 @@ javascript: (function () {
           }
 
           if (item.parent_id === item.link_id) {
-            if (!fdata.requests[item.id]) {
+            if (!fdata.requests[item.id] && !item.removed && !item.spam) {
+              console.log(item.author_flair_text, !item.author_flair_text);
               fdata.requests[item.id] = {
                 id: item.id,
                 author: item.author,
                 class: item.author_flair_css_class,
+                newUser: !item.author_flair_text,
                 children: [],
               };
             }
@@ -139,12 +143,12 @@ javascript: (function () {
             if (item.replies && item.replies.data.children) {
               flair.apply(item.replies.data.children);
             }
-          } else if (fdata.requests[parentid]) {
+          } else if (fdata.requests[parentid] && !item.removed && !item.spam) {
             fdata.requests[parentid].children.push({
               id: item.id,
               author: item.author,
               score: item.score,
-              text: item.body,
+              text: flair.decode(item.body_html) || item.body
             });
           } else {
             console.log('Somehow I have a child comment with no parent');
@@ -240,6 +244,10 @@ javascript: (function () {
             };
           }
 
+          if (request.newUser) {
+            fdata.stats.newUsers.push(request.author);
+          }
+
           fdata.outputPrep[request.author].author = request.author;
           fdata.outputPrep[request.author].replies = request.children.length;
           fdata.outputPrep[request.author].class = request.class;
@@ -273,6 +281,8 @@ javascript: (function () {
 
             if (item.winner) {
               fdata.outputPrep[item.author].wins++;
+              fdata.stats.winscore += item.score;
+
               fdata.outputPrep[request.author].flair_text = item.text.match(/\[.{0,62}\]/) ? item.text.match(/\[.{0,62}\]/)[0] : '[]';
               fdata.outputPrep[request.author].flair_link = item.id;
               if (fdata.outputPrep[item.author].win_link.indexOf(item.id) === -1) {
@@ -301,6 +311,8 @@ javascript: (function () {
                       (a.author.toLowerCase() < b.author.toLowerCase() ? -1 : 0))))))));
       });
 
+      fdata.stats.newUsers = fdata.stats.newUsers.sort();
+
       if (confirm('Would you like to set flairs?')) {
         fdata.flairsetter = fdata.output.slice();
         fdata.times.applyStart = new Date();
@@ -310,6 +322,23 @@ javascript: (function () {
       }
     },
     outputer: function () {
+      function requestHandler(item) {
+        var tiestr = item.hadTie ? ' *' : '';
+        var requestStr = '';
+        if (item.request_link.length == 1) {
+          requestStr += '[' + flair.sanitize(item.author) + '](' + base + '/_/' + item.request_link[0] + ')' + tiestr;
+        } else if (item.request_link.length > 1) {
+          requestStr += flair.sanitize(item.author) + ' ';
+          for (ii = 0; ii < item.request_link.length; ii++) {
+            requestStr += '[[' + (ii + 1) + ']](' + base + '/_/' + item.request_link[ii] + ')';
+          }
+          requestStr += tiestr;
+        } else {
+          requestStr += flair.sanitize(item.author) + tiestr;
+        }
+        return requestStr;
+      }
+
       var str = '#In this month\'s flair thread: \n\n';
       var base = '/r/CenturyClub/comments/' + flair.thread_id;
       var tablestr = 'User|Successful Flairs|Attempted Flairs|Weighted Successes|Success Permalinks\n';
@@ -317,18 +346,7 @@ javascript: (function () {
       var ii;
       for (i = 0; i < fdata.output.length; i++) {
         item = fdata.output[i];
-        var tiestr = item.hadTie ? ' *' : '';
-        if (item.request_link.length == 1) {
-          tablestr += '[' + item.author.replace(/_/g, '\\_') + '](' + base + '/_/' + item.request_link[0] + ')' + tiestr + '|';
-        } else if (item.request_link.length > 1) {
-          tablestr += item.author.replace(/_/g, '\\_') + ' ';
-          for (ii = 0; ii < item.request_link.length; ii++) {
-            tablestr += '[[' + (ii + 1) + ']](' + base + '/_/' + item.request_link[ii] + ')';
-          }
-          tablestr += tiestr + '|';
-        } else {
-          tablestr += item.author.replace(/_/g, '\_') + tiestr + '|';
-        }
+        tablestr += requestHandler(item) + '|';
 
         tablestr += (item.attempts > 0 ? item.wins : '-') + '|';
         tablestr += (item.attempts > 0 ? item.attempts : '-') + '|';
@@ -340,14 +358,28 @@ javascript: (function () {
         tablestr += '\n';
       }
       tablestr += (fdata.stats.ties > 0 ? '\n\\* had a tie that was resolved\n\n' : '');
+      tablestr += 'Table sorted by if the user was a moocher, weighted score desc, number of attempts asc, username asc\n\n';
 
       tablestr += '---\n\n##Some stats: \n\n';
-      tablestr += '* clicked ' + (fdata.stats.morelinksclicked) + ' "more" links' + flair.diff('loaded', fdata.times.moreStart, fdata.times.moreEnd) + '\n\n';
-      tablestr += '* ' + fdata.stats.ties + ' ties' + flair.diff('resolved', fdata.times.tieStart, fdata.times.tieEnd) + '\n\n';
-      tablestr += '* ' + fdata.stats.requests + ' requestss' + flair.diff('applied', fdata.times.applyStart, fdata.times.applyEnd) + '\n\n';
+      tablestr += '* clicked ' + fdata.stats.morelinksclicked + ' "more" links\n';
+      tablestr += ' * ' + flair.diff('Loaded all comments', fdata.times.moreStart, fdata.times.moreEnd, fdata.stats.morelinksclicked) + '\n\n';
+
+      tablestr += '* ' + fdata.stats.ties + ' ties\n';
+      tablestr += ' * ' + flair.diff('Resolved ties', fdata.times.tieStart, fdata.times.tieEnd, fdata.stats.ties) + '\n\n';
+
+      tablestr += '* ' + fdata.stats.requests + ' requests\n';
+      tablestr += ' * ' + flair.diff('Applied flairs', fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests) + '\n\n';
+
       tablestr += '* ' + fdata.stats.attempts + ' attempts\n\n';
+      tablestr += '* ' + (fdata.stats.winscore / fdata.stats.requests).toFixed(2) + ' average winning score\n\n';
       tablestr += '* ' + (fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2) + ' average attempt score\n\n';
       tablestr += '* ' + (fdata.stats.attempts / fdata.stats.requests).toFixed(2) + ' average attempts per reply\n\n';
+
+      tablestr += '\n\n---\n\n##New users / users with flair disabled\n\n';
+      for (i = 0; i < fdata.stats.newUsers.length; i++) {
+        var item = fdata.outputPrep[fdata.stats.newUsers[i]];
+        tablestr += '* ' + requestHandler(item) + '\n';
+      }
 
       tablestr += '\n\n---\n\n[Here\'s a link to the flair thread](' + base + ')\n';
 
@@ -397,16 +429,22 @@ javascript: (function () {
         flair.outputer();
       }
     },
-    diff: function (label, start, end) {
-      var diff = Math.round((end.getTime() - start.getTime())/1000);
+    decode: function (str) {
+      return $ && $("<div/>").html($("<div/>").html(str).text()).text().trim();
+    },
+    sanitize: function (str) {
+      return str.replace(/_/g, '\\_');
+    },
+    diff: function (label, start, end, qty) {
+      var diff = Math.round((end.getTime() - start.getTime()) / 1000);
       if (diff == 0) {
         return '';
       }
 
       var minutes = Math.floor(diff / 60),
         seconds = diff - (minutes * 60);
-      
-      return ' (' + label + ' in ' + (minutes > 0 ? minutes + ':' : '') + seconds + ')';
+
+      return label + ' in ' + minutes + ':' + ('0' + seconds).slice(-2) + ' - *average ' + (diff / qty).toFixed(2) + ' seconds*';
     }
   };
 
