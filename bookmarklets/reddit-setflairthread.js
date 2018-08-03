@@ -130,7 +130,6 @@ javascript: (function () {
 
           if (item.parent_id === item.link_id) {
             if (!fdata.requests[item.id] && !item.removed && !item.spam) {
-              console.log(item.author_flair_text, !item.author_flair_text);
               fdata.requests[item.id] = {
                 id: item.id,
                 author: item.author,
