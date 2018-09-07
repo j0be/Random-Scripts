@@ -1,5 +1,5 @@
 javascript: (function () {
-  var fdata = typeof fdata !== 'undefined' && fdata.gathered ? fdata : {
+  window.fdata = typeof window.fdata !== 'undefined' && window.fdata.gathered ? window.fdata : {
     requests: {},
     output: [],
     outputPrep: {},
@@ -89,7 +89,7 @@ javascript: (function () {
       more: function () {
         if (fdata.more.length) {
           fdata.gathered = false;
-          flair.title('Fetching ' + fdata.more[0] + ': ' + fdata.more.length + ' remaining');
+          flair.title('Fetching more links: ' + fdata.more.length + ' remaining');
           fetch('/r/CenturyClub/comments/' + flair.thread_id + '/x/' + fdata.more[0] + '.json?limit=1500', {
             credentials: 'include',
             headers: {
@@ -173,49 +173,51 @@ javascript: (function () {
 
       var thereAreTies = false;
       for (key in fdata.requests) {
-        if (fdata.requests.hasOwnProperty(key) && !fdata.requests[key].tieBroken) {
-          index ++;
-          flair.title('Breaking ties: ' + index + '/' + fdata.stats.requests);
-          flair.tempArr = [];
-          fdata.requests[key].children = fdata.requests[key].children.sort(function (a, b) {
-            return (a.score > b.score ? -1 : (a.score < b.score ? 1 : 0));
-          });
+        if (fdata.requests.hasOwnProperty(key)) {
+          index++;
+          if (!fdata.requests[key].tieBroken) {
+            flair.title('Breaking ties: ' + index + '/' + Object.keys(fdata.requests).length);
+            flair.tempArr = [];
+            fdata.requests[key].children = fdata.requests[key].children.sort(function (a, b) {
+              return (a.score > b.score ? -1 : (a.score < b.score ? 1 : 0));
+            });
 
-          if (fdata.requests[key].children.length) {
-            var children = fdata.requests[key].children,
-              highScore = children[0].score;
+            if (fdata.requests[key].children.length) {
+              var children = fdata.requests[key].children,
+                highScore = children[0].score;
 
-            for (i = 0; i < children.length; i++) {
-              if (children[i].score === highScore) {
-                fdata.requests[key].children[i].index = i;
-                flair.tempArr.push(children[i]);
+              for (i = 0; i < children.length; i++) {
+                if (children[i].score === highScore) {
+                  fdata.requests[key].children[i].index = i;
+                  flair.tempArr.push(children[i]);
+                }
               }
-            }
-          } else {
-            alert(fdata.requests[key].author + ' has a request with no responses');
-            break;
-          }
-
-          if (flair.tempArr.length > 1) {
-            thereAreTies = true;
-            fdata.stats.ties++;
-
-            str = '<div class="parent_author">Flair for /u/' + fdata.requests[key].author + ' has a tie. Choose a winner.</div>';
-            for (i = 0; i < flair.tempArr.length; i++) {
-              fdata.requests[key].children[flair.tempArr[i].index].tied = true;
-              str += '<button class="tiebreaker" data-parent="' + key + '" data-index="' + flair.tempArr[i].index + '"><div><span class="author">/u/' + flair.tempArr[i].author + '</span> <span class="points">' + flair.tempArr[i].score + ' points</span></div><div class="text">' + flair.tempArr[i].text + '</div></button>';
-            }
-            flair.output(str);
-
-            var buttons = document.getElementsByClassName('tiebreaker');
-
-            for (i = 0; i < buttons.length; i++) {
-              buttons[i].addEventListener('click', tiebreaker);
+            } else {
+              alert(fdata.requests[key].author + ' has a request with no responses');
+              break;
             }
 
-            break;
-          } else if (fdata.requests[key].children.length) {
-            fdata.requests[key].children[0].winner = true;
+            if (flair.tempArr.length > 1) {
+              thereAreTies = true;
+              fdata.stats.ties++;
+
+              str = '<div class="parent_author">Flair for /u/' + fdata.requests[key].author + ' has a tie. Choose a winner.</div>';
+              for (i = 0; i < flair.tempArr.length; i++) {
+                fdata.requests[key].children[flair.tempArr[i].index].tied = true;
+                str += '<button class="tiebreaker" data-parent="' + key + '" data-index="' + flair.tempArr[i].index + '"><div><span class="author">/u/' + flair.tempArr[i].author + '</span> <span class="points">' + flair.tempArr[i].score + ' points</span></div><div class="text">' + flair.tempArr[i].text + '</div></button>';
+              }
+              flair.output(str);
+
+              var buttons = document.getElementsByClassName('tiebreaker');
+
+              for (i = 0; i < buttons.length; i++) {
+                buttons[i].addEventListener('click', tiebreaker);
+              }
+
+              break;
+            } else if (fdata.requests[key].children.length) {
+              fdata.requests[key].children[0].winner = true;
+            }
           }
         }
       }
