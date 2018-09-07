@@ -157,7 +157,7 @@ javascript: (function () {
       }
     },
     checkTies: function () {
-      var i, key, str;
+      var i, key, str, index = 0;
       flair.title('Breaking ties');
 
       function tiebreaker(event) {
@@ -174,6 +174,8 @@ javascript: (function () {
       var thereAreTies = false;
       for (key in fdata.requests) {
         if (fdata.requests.hasOwnProperty(key) && !fdata.requests[key].tieBroken) {
+          index ++;
+          flair.title('Breaking ties: ' + index + '/' + fdata.stats.requests);
           flair.tempArr = [];
           fdata.requests[key].children = fdata.requests[key].children.sort(function (a, b) {
             return (a.score > b.score ? -1 : (a.score < b.score ? 1 : 0));
@@ -323,9 +325,7 @@ javascript: (function () {
       }
     },
     outputer: function () {
-      var baseUrl = '/r/CenturyClub/comments/' + flair.thread_id,
-        str = '#In this month\'s flair thread: \n\n';
-
+      var baseUrl = '/r/CenturyClub/comments/' + flair.thread_id;
       function requestHandler(item) {
         var tiestr = item.hadTie ? ' *' : '';
         var requestStr = '';
@@ -394,12 +394,13 @@ javascript: (function () {
         return statsStr;
       }
 
+      var str = '#In this month\'s flair thread: \n\n';
       str += prepTable();
       str += prepNewUsers();
       str += prepStats();
-
       str += '\n\n---\n\n[Here\'s a link to the flair thread](' + baseUrl + ')\n';
       str = '<textarea>' + str + '</textarea>';
+
       flair.title('Done');
       flair.output(str);
     },
