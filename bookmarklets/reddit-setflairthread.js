@@ -143,11 +143,12 @@ javascript: (function () {
               flair.apply(item.replies.data.children);
             }
           } else if (fdata.requests[parentid] && !item.removed && !item.spam) {
+            var flair_text = flair.decode(item.body_html) || item.body;
             fdata.requests[parentid].children.push({
               id: item.id,
               author: item.author,
               score: item.score,
-              text: flair.decode(item.body_html) || item.body
+              text: flair_text.match(/\[.{0,62}\]/) ? flair_text.match(/\[.{0,62}\]/)[0] : '[]'
             });
           } else {
             console.log('Somehow I have a child comment with no parent');
@@ -190,6 +191,7 @@ javascript: (function () {
             }
           } else {
             alert(fdata.requests[key].author + ' has a request with no responses');
+            break;
           }
 
           if (flair.tempArr.length > 1) {
@@ -243,7 +245,7 @@ javascript: (function () {
             };
           }
 
-          if (request.newUser) {
+          if (request.newUser && request.author !== '[deleted]') {
             fdata.stats.newUsers.push(request.author);
           }
 
@@ -282,7 +284,7 @@ javascript: (function () {
               fdata.outputPrep[item.author].wins++;
               fdata.stats.winscore += item.score;
 
-              fdata.outputPrep[request.author].flair_text = item.text.match(/\[.{0,62}\]/) ? item.text.match(/\[.{0,62}\]/)[0] : '[]';
+              fdata.outputPrep[request.author].flair_text = item.text;
               fdata.outputPrep[request.author].flair_link = item.id;
               if (fdata.outputPrep[item.author].win_link.indexOf(request.author + ',' + item.id) === -1) {
                 fdata.outputPrep[item.author].win_link.push(request.author + ',' + item.id);
@@ -321,15 +323,18 @@ javascript: (function () {
       }
     },
     outputer: function () {
+      var baseUrl = '/r/CenturyClub/comments/' + flair.thread_id,
+        str = '#In this month\'s flair thread: \n\n';
+
       function requestHandler(item) {
         var tiestr = item.hadTie ? ' *' : '';
         var requestStr = '';
         if (item.request_link.length == 1) {
-          requestStr += '[' + flair.sanitize(item.author) + '](' + base + '/_/' + item.request_link[0] + ')' + tiestr;
+          requestStr += '[' + flair.sanitize(item.author) + '](' + baseUrl + '/_/' + item.request_link[0] + ')' + tiestr;
         } else if (item.request_link.length > 1) {
           requestStr += flair.sanitize(item.author) + ' ';
           for (ii = 0; ii < item.request_link.length; ii++) {
-            requestStr += '[[' + (ii + 1) + ']](' + base + '/_/' + item.request_link[ii] + ')';
+            requestStr += '[[' + (ii + 1) + ']](' + baseUrl + '/_/' + item.request_link[ii] + ')';
           }
           requestStr += tiestr;
         } else {
@@ -338,52 +343,63 @@ javascript: (function () {
         return requestStr;
       }
 
-      var str = '#In this month\'s flair thread: \n\n';
-      var base = '/r/CenturyClub/comments/' + flair.thread_id;
-      var tablestr = 'User|Successful Flairs|Attempted Flairs|Weighted Successes|Success Permalinks\n';
-      tablestr += ':--|--:|--:|--:|:--\n';
-      var ii;
-      for (i = 0; i < fdata.output.length; i++) {
-        item = fdata.output[i];
-        tablestr += requestHandler(item) + '|';
+      function prepTable() {
+        var i, ii;
+        var tablestr = 'User|Successful Flairs|Attempted Flairs|Weighted Successes|Success Permalinks\n';
+        tablestr += ':--|--:|--:|--:|:--\n';
+        for (i = 0; i < fdata.output.length; i++)  {
+          item = fdata.output[i];
+          tablestr += requestHandler(item) + '|';
 
-        tablestr += (item.attempts > 0 ? item.wins : '-') + '|';
-        tablestr += (item.attempts > 0 ? item.attempts : '-') + '|';
-        tablestr += (item.attempts > 0 ? item.weighted.toFixed(2) : '-') + '|';
+          tablestr += (item.attempts > 0 ? item.wins : '-') + '|';
+          tablestr += (item.attempts > 0 ? item.attempts : '-') + '|';
+          tablestr += (item.attempts > 0 ? item.weighted.toFixed(2) : '-') + '|';
 
-        item.win_link = flair.sort(item.win_link);
-        for (ii = 0; ii < item.win_link.length; ii++) {
-          tablestr += '[' + item.win_link[ii].split(',')[0] + '](' + base + '/_/' + item.win_link[ii].split(',')[1] + '?context=1)' + (ii + 1 < item.win_link.length ? ', ' : '');
+          item.win_link = flair.sort(item.win_link);
+          for (ii = 0; ii < item.win_link.length; ii++) {
+            tablestr += '[' + flair.sanitize(item.win_link[ii].split(',')[0]) + '](' + baseUrl + '/_/' + item.win_link[ii].split(',')[1] + '?context=1)' + (ii + 1 < item.win_link.length ? ', ' : '');
+          }
+            tablestr += '\n';
         }
-        tablestr += '\n';
-      }
-      tablestr += (fdata.stats.ties > 0 ? '\n\\* had a tie that was resolved\n\n' : '');
-      tablestr += 'Table sorted by if the user was a moocher, weighted score desc, number of attempts asc, username asc\n\n';
 
-      tablestr += '---\n\n##Some stats: \n\n';
-      tablestr += '* clicked ' + fdata.stats.morelinksclicked + ' "more" links\n';
-      tablestr += ' * ' + flair.diff('Loaded all comments', fdata.times.moreStart, fdata.times.moreEnd, fdata.stats.morelinksclicked + 1) + '\n\n';
-
-      tablestr += '* ' + fdata.stats.ties + ' ties\n';
-      tablestr += ' * ' + flair.diff('Resolved ties', fdata.times.tieStart, fdata.times.tieEnd, fdata.stats.ties) + '\n\n';
-
-      tablestr += '* ' + fdata.stats.requests + ' requests\n';
-      tablestr += ' * ' + flair.diff('Applied flairs', fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests) + '\n\n';
-
-      tablestr += '* ' + fdata.stats.attempts + ' attempts\n\n';
-      tablestr += '* ' + (fdata.stats.winscore / fdata.stats.requests).toFixed(2) + ' average winning score\n\n';
-      tablestr += '* ' + (fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2) + ' average attempt score\n\n';
-      tablestr += '* ' + (fdata.stats.attempts / fdata.stats.requests).toFixed(2) + ' average attempts per reply\n\n';
-
-      tablestr += '\n\n---\n\n##New users / users with flair disabled\n\n';
-      for (i = 0; i < fdata.stats.newUsers.length; i++) {
-        var item = fdata.outputPrep[fdata.stats.newUsers[i]];
-        tablestr += '* ' + requestHandler(item) + '\n';
+        tablestr += fdata.stats.ties > 0 ? '\n\\* had a tie that was resolved\n\n' : '';
+        tablestr += '*Table sorted by if the user was a moocher, weighted score desc, number of attempts asc, username asc*\n\n';
+        return tablestr;
       }
 
-      tablestr += '\n\n---\n\n[Here\'s a link to the flair thread](' + base + ')\n';
+      function prepNewUsers() {
+        var newUserStr = '\n\n---\n\n##New users / users with flair disabled\n\n';
+        for (i = 0; i < fdata.stats.newUsers.length; i++) {
+          var item = fdata.outputPrep[fdata.stats.newUsers[i]];
+          newUserStr += requestHandler(item) + ', ';
+        }
+        return newUserStr;
+      }
 
-      str = '<textarea>' + str + tablestr + '</textarea>';
+      function prepStats() {
+        var statsStr = '---\n\n##Some stats: \n\n';
+        statsStr += '* clicked ' + fdata.stats.morelinksclicked + ' "more" links\n';
+        statsStr += ' * ' + flair.diff('Loaded all comments', fdata.times.moreStart, fdata.times.moreEnd, fdata.stats.morelinksclicked + 1) + '\n\n';
+
+        statsStr += '* ' + fdata.stats.ties + ' ties (' + (100 * (fdata.stats.ties / fdata.stats.requests)).toFixed(1) + '%)\n';
+        statsStr += ' * ' + flair.diff('Resolved ties', fdata.times.tieStart, fdata.times.tieEnd, fdata.stats.ties) + '\n\n';
+
+        statsStr += '* ' + fdata.stats.requests + ' requests\n';
+        statsStr += ' * ' + flair.diff('Applied flairs', fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests) + '\n\n';
+
+        statsStr += '* ' + fdata.stats.attempts + ' attempts\n\n';
+        statsStr += '* ' + (fdata.stats.winscore / fdata.stats.requests).toFixed(2) + ' average winning score\n\n';
+        statsStr += '* ' + (fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2) + ' average attempt score\n\n';
+        statsStr += '* ' + (fdata.stats.attempts / fdata.stats.requests).toFixed(2) + ' average attempts per reply\n\n';
+        return statsStr;
+      }
+
+      str += prepTable();
+      str += prepNewUsers();
+      str += prepStats();
+
+      str += '\n\n---\n\n[Here\'s a link to the flair thread](' + baseUrl + ')\n';
+      str = '<textarea>' + str + '</textarea>';
       flair.title('Done');
       flair.output(str);
     },
