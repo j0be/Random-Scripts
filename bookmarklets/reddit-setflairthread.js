@@ -346,27 +346,31 @@ javascript: (function () {
       }
 
       function prepTable() {
-        var i, ii;
+        var i, ii, moochers = '##Moochers\n\nThe users who requested flair, but didn\'t suggest any for anyone else.\n\n';
         var tablestr = 'User|Successful Flairs|Attempted Flairs|Weighted Successes|Success Permalinks\n';
         tablestr += ':--|--:|--:|--:|:--\n';
         for (i = 0; i < fdata.output.length; i++)  {
           item = fdata.output[i];
-          tablestr += requestHandler(item) + '|';
+          if (item.attempts) {
+            tablestr += requestHandler(item) + '|';
 
-          tablestr += (item.attempts > 0 ? item.wins : '-') + '|';
-          tablestr += (item.attempts > 0 ? item.attempts : '-') + '|';
-          tablestr += (item.attempts > 0 ? item.weighted.toFixed(2) : '-') + '|';
+            tablestr += (item.attempts > 0 ? item.wins : '-') + '|';
+            tablestr += (item.attempts > 0 ? item.attempts : '-') + '|';
+            tablestr += (item.attempts > 0 ? item.weighted.toFixed(2) : '-') + '|';
 
-          item.win_link = flair.sort(item.win_link);
-          for (ii = 0; ii < item.win_link.length; ii++) {
-            tablestr += '[' + flair.sanitize(item.win_link[ii].split(',')[0]) + '](' + baseUrl + '/_/' + item.win_link[ii].split(',')[1] + '?context=1)' + (ii + 1 < item.win_link.length ? ', ' : '');
-          }
+            item.win_link = flair.sort(item.win_link);
+            for (ii = 0; ii < item.win_link.length; ii++) {
+              tablestr += '[' + flair.sanitize(item.win_link[ii].split(',')[0]) + '](' + baseUrl + '/_/' + item.win_link[ii].split(',')[1] + '?context=1)' + (ii + 1 < item.win_link.length ? ', ' : '');
+            }
             tablestr += '\n';
+          } else {
+            moochers += requestHandler(item) + ', ';
+          }
         }
 
-        tablestr += fdata.stats.ties > 0 ? '\n\\* had a tie that was resolved\n\n' : '';
-        tablestr += '*Table sorted by if the user was a moocher, weighted score desc, number of attempts asc, username asc*\n\n';
-        return tablestr;
+        tablestr += fdata.stats.ties > 0 ? '\n^(* had a tie that was resolved)    \n' : '';
+        tablestr += '^(*Table sorted by weighted score desc, number of attempts asc, username asc*)\n\n';
+        return tablestr + '\n' + moochers;
       }
 
       function prepNewUsers() {
@@ -375,24 +379,28 @@ javascript: (function () {
           var item = fdata.outputPrep[fdata.stats.newUsers[i]];
           newUserStr += requestHandler(item) + ', ';
         }
-        return newUserStr;
+        return newUserStr.slice(0, -2) + '\n\n';
       }
 
       function prepStats() {
         var statsStr = '---\n\n##Some stats: \n\n';
-        statsStr += '* clicked ' + fdata.stats.morelinksclicked + ' "more" links\n';
-        statsStr += ' * ' + flair.diff('Loaded all comments', fdata.times.moreStart, fdata.times.moreEnd, fdata.stats.morelinksclicked + 1) + '\n\n';
-
-        statsStr += '* ' + fdata.stats.ties + ' ties (' + (100 * (fdata.stats.ties / fdata.stats.requests)).toFixed(1) + '%)\n';
-        statsStr += ' * ' + flair.diff('Resolved ties', fdata.times.tieStart, fdata.times.tieEnd, fdata.stats.ties) + '\n\n';
-
-        statsStr += '* ' + fdata.stats.requests + ' requests\n';
-        statsStr += ' * ' + flair.diff('Applied flairs', fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests) + '\n\n';
-
-        statsStr += '* ' + fdata.stats.attempts + ' attempts\n\n';
-        statsStr += '* ' + (fdata.stats.winscore / fdata.stats.requests).toFixed(2) + ' average winning score\n\n';
-        statsStr += '* ' + (fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2) + ' average attempt score\n\n';
-        statsStr += '* ' + (fdata.stats.attempts / fdata.stats.requests).toFixed(2) + ' average attempts per reply\n\n';
+        statsStr += '\\#|Units|Summary\n--:|:--|:--\n';
+        statsStr += fdata.stats.morelinksclicked + '|-|"More" links clicked\n';
+        statsStr += flair.diff(fdata.times.moreStart, fdata.times.moreEnd) + '|Minutes|Loaded all comments\n';
+        statsStr += flair.diff(fdata.times.moreStart, fdata.times.moreEnd, fdata.stats.morelinksclicked + 1) + '|Seconds|Average "more" link load time\n';
+        statsStr += fdata.stats.requests + '|-|Flair requests\n';
+        statsStr += (fdata.stats.attempts / fdata.stats.requests).toFixed(2) + '|-|Attempts per flair request\n';
+        statsStr += fdata.stats.ties + '|-|Requests ended in ties\n';
+        statsStr += (100 * (fdata.stats.ties / fdata.stats.requests)).toFixed(1) + '%|-|Requests ended in ties\n';
+        statsStr += flair.diff(fdata.times.tieStart, fdata.times.tieEnd) + '|Minutes|Time to resolve ties\n';
+        statsStr += flair.diff(fdata.times.tieStart, fdata.times.tieEnd, fdata.stats.ties) + '|Seconds|Average time to resolve a single tie\n';
+        statsStr += fdata.stats.attempts + '|-|Flair attempts\n';
+        statsStr += (fdata.stats.winscore / fdata.stats.requests).toFixed(2) + '|Upvotes|Karma per winning flair\n';
+        statsStr += (fdata.stats.attemptscore / fdata.stats.requests).toFixed(2) + '|Upvotes|Karma per attempt\n';
+        if (applyStart) {
+          statsStr += (flair.diff(fdata.times.applyStart, fdata.times.applyEnd) || '-') + '|Minutes|Time to set new flairs\n';
+          statsStr += (flair.diff(fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests) || '-') + '|Seconds|Average time to set a single flair\n\n';
+        }
         return statsStr;
       }
 
@@ -461,7 +469,7 @@ javascript: (function () {
     sanitize: function (str) {
       return str.replace(/_/g, '\\_');
     },
-    diff: function (label, start, end, qty) {
+    diff: function (start, end, qty) {
       var diff = Math.round((end.getTime() - start.getTime()) / 1000);
       if (diff == 0) {
         return '';
@@ -470,7 +478,10 @@ javascript: (function () {
       var minutes = Math.floor(diff / 60),
         seconds = diff - (minutes * 60);
 
-      return label + ' in ' + minutes + ':' + ('0' + seconds).slice(-2) + ' - *average ' + (diff / qty).toFixed(2) + ' seconds*';
+      if (qty) {
+        return (diff / qty).toFixed(2);
+      }
+      return minutes + ':' + ('0' + seconds).slice(-2);
     }
   };
 
