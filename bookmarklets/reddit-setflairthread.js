@@ -454,7 +454,9 @@ javascript: (function () {
       });
     },
     decode: function (str) {
-      return $ && $("<div/>").html($("<div/>").html(str).text()).text().trim();
+      var txt = document.createElement("textarea");
+      txt.innerHTML = str;
+      return txt.value.trim();
     },
     sanitize: function (str) {
       return str.replace(/_/g, '\\_');
