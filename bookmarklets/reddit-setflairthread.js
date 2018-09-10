@@ -11,7 +11,8 @@ javascript: (function () {
       winscore: 0,
       ties: 0,
       morelinksclicked: 0,
-      newUsers: [],
+      newUsers: 0,
+      disabledUsers: 0
     },
     times: {
       moreStart: new Date(),
@@ -20,6 +21,11 @@ javascript: (function () {
       tieEnd: new Date(),
       applyStart: new Date(),
       applyEnd: new Date(),
+    },
+    mapper: {
+      tied: '*',
+      new: '&#8224;',
+      disabled: '&#8225;'
     }
   };
 
@@ -27,11 +33,14 @@ javascript: (function () {
     thread_id: document.location.href.split('/')[6],
     init: function () {
       var styler,
-        str = '#flair-output { color: #000; position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); background: #fff; padding: 15px; z-index: 999; max-height: 80vh; overflow: auto; }';
-      str += '#flair-output button { width: 100%; margin: .5em 0; display: block; text-align: left; }';
+        str = '#flair-output { color: #000; position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 999; overflow: visible; }';
+      str += '#flair-output button { width: 100%; margin: .5em 0; display: block; text-align: left; text-transform: none; }';
+      str += '#flair-output button a { pointer-events: none; }';
       str += '#flair-output button .author { float: left; opacity: .6; }';
       str += '#flair-output button .points { float: right; opacity: .6; }';
       str += '#flair-output button .text { float: left; clear: both; font-size: 1.2em; margin-top: .3em;}';
+      str += '#flair-output::before { content: ""; display: block; position: fixed; background: rgba(0, 0, 0, .4); top: -100vh; left: -100vw; right: -100vw; bottom: -100vh; z - index: -1; }';
+      str += '#flair-output > div { padding: 15px; background: #fff; position: relative; z-index: 1; max-height: 80vh; overflow: auto; }';
       if (!document.getElementById('styler')) {
         styler = document.createElement('style');
         styler.setAttribute('id', 'styler');
@@ -62,11 +71,11 @@ javascript: (function () {
       if (!document.getElementById('flair-output')) {
         output = document.createElement('div');
         output.setAttribute('id', 'flair-output');
-        output.innerHTML = str;
+        output.innerHTML = '<div>'+str+'</div>';
         document.body.appendChild(output);
       } else {
         output = document.getElementById('flair-output');
-        output.innerHTML = str;
+        output.innerHTML = '<div>' + str + '</div>';
       }
     },
     get: {
@@ -116,8 +125,8 @@ javascript: (function () {
         }
       }
     },
-    apply: function (data) {
-      for (var i = 0; i < data.length; i++) {
+    apply: function (data, index) {
+      for (var i = index || 0; i < data.length; i++) {
         if (data[i].kind === 'more') {
           fdata.more = fdata.more.concat(data[i].data.children);
         } else {
@@ -133,13 +142,15 @@ javascript: (function () {
               fdata.requests[item.id] = {
                 id: item.id,
                 author: item.author,
+                attributes: [],
                 class: item.author_flair_css_class,
-                newUser: !item.author_flair_text,
                 children: [],
               };
             }
-
-            if (item.replies && item.replies.data.children) {
+            if (!item.author_flair_text && item.author !== '[deleted]' && !item.checkedBlank) {
+              flair.checkBlankFlair(item.id, item.author, data, i);
+              break;
+            } else if (item.replies && item.replies.data.children) {
               flair.apply(item.replies.data.children);
             }
           } else if (fdata.requests[parentid] && !item.removed && !item.spam) {
@@ -155,6 +166,39 @@ javascript: (function () {
           }
         }
       }
+    },
+    checkBlankFlair: function(id, author, data, index) {
+      flair.title('Checking blank flair for ' + author);
+      var esc = encodeURIComponent,
+        params = {
+          name: author,
+          r: r.config.cur_listing,
+          uh: fdata.modhash
+        },
+        paramStr = Object.keys(params)
+          .map(function(k) { return esc(k) + '=' + esc(params[k]); })
+          .join('&');
+
+      fetch('/r/CenturyClub/api/flairlist.json?' + paramStr, {
+        credentials: 'include',
+        headers: {
+          'cookie': document.cookie
+        },
+        referrer: document.location.protocol + '//' + document.location.host
+      }).then(function (response) {
+        return response.json();
+      }).then(function (responseData) {
+        if (!!responseData.users[0].flair_text) {
+          fdata.stats.disabledUsers ++;
+          fdata.requests[id].attributes.push(fdata.mapper.disabled);
+        } else {
+          fdata.stats.newUsers ++;
+          fdata.requests[id].attributes.push(fdata.mapper.new);
+        }
+        data[index].data.checkedBlank = true;
+        flair.apply(data, index);
+      });
+      
     },
     checkTies: function () {
       var i, key, str, index = 0;
@@ -192,9 +236,9 @@ javascript: (function () {
                   flair.tempArr.push(children[i]);
                 }
               }
-            } else {
+            } else if (!fdata.requests[key].alerted) {
+              fdata.requests[key].alerted = true;
               alert(fdata.requests[key].author + ' has a request with no responses');
-              break;
             }
 
             if (flair.tempArr.length > 1) {
@@ -245,18 +289,18 @@ javascript: (function () {
               wins: 0,
               request_link: [],
               attempt_link: [],
-              win_link: []
+              win_link: [],
+              attributes: []
             };
-          }
-
-          if (request.newUser && request.author !== '[deleted]') {
-            fdata.stats.newUsers.push(request.author);
           }
 
           fdata.outputPrep[request.author].author = request.author;
           fdata.outputPrep[request.author].replies = request.children.length;
           fdata.outputPrep[request.author].class = request.class;
-          fdata.outputPrep[request.author].hadTie = !!request.tieBroken;
+          fdata.outputPrep[request.author].attributes = request.attributes;
+          if (!!request.tieBroken) {
+            fdata.outputPrep[request.author].attributes.push(fdata.mapper.tied);
+          }
 
           if (fdata.outputPrep[request.author].request_link.indexOf(request.id) === -1) {
             fdata.outputPrep[request.author].request_link.push(request.id);
@@ -316,8 +360,6 @@ javascript: (function () {
                       (a.author.toLowerCase() < b.author.toLowerCase() ? -1 : 0))))))));
       });
 
-      fdata.stats.newUsers = flair.sort(fdata.stats.newUsers);
-
       if (confirm('Would you like to set flairs?')) {
         fdata.flairsetter = fdata.output.slice();
         fdata.times.applyStart = new Date();
@@ -329,24 +371,23 @@ javascript: (function () {
     outputer: function () {
       var baseUrl = '/r/CenturyClub/comments/' + flair.thread_id;
       function requestHandler(item) {
-        var tiestr = item.hadTie ? ' *' : '';
         var requestStr = '';
+        item.attributes = item.attributes && item.attributes.filter(flair.unique) || [];
         if (item.request_link.length == 1) {
-          requestStr += '[' + flair.sanitize(item.author) + '](' + baseUrl + '/_/' + item.request_link[0] + ')' + tiestr;
+          requestStr += '[' + flair.sanitize(item.author) + '](' + baseUrl + '/_/' + item.request_link[0] + ')';
         } else if (item.request_link.length > 1) {
           requestStr += flair.sanitize(item.author) + ' ';
           for (ii = 0; ii < item.request_link.length; ii++) {
             requestStr += '[[' + (ii + 1) + ']](' + baseUrl + '/_/' + item.request_link[ii] + ')';
           }
-          requestStr += tiestr;
         } else {
-          requestStr += flair.sanitize(item.author) + tiestr;
+          requestStr += flair.sanitize(item.author);
         }
-        return requestStr;
+        return requestStr + (item.attributes.length ? ' ' + item.attributes.join(', ') : '');
       }
 
-      function prepTable() {
-        var i, ii, moochers = '##Moochers\n\nThe users who requested flair, but didn\'t suggest any for anyone else.\n\n';
+      function outputMainInformation() {
+        var i, ii, moochers = '###Moochers\n\nThe users who requested flair, but didn\'t suggest any for anyone else.\n\n';
         var tablestr = 'User|Wins|Tries|Score|Win Permalinks\n';
         tablestr += ':--|--:|--:|--:|:--\n';
         for (i = 0; i < fdata.output.length; i++)  {
@@ -368,26 +409,20 @@ javascript: (function () {
           }
         }
 
-        tablestr += '^(*Table sorted by weighted score desc, number of attempts asc, username asc*)    \n';
-        tablestr += fdata.stats.ties > 0 ? '\n^(* had a tie that was resolved)\n\n' : '';
-        tablestr += ' |Definitions\n--:|:--\n';
+        tablestr += '^(*Table sorted by weighted score desc, number of attempts asc, username asc*)&nbsp;&nbsp;&nbsp;&nbsp;\n';
+        tablestr += fdata.stats.ties > 0 ? '^(' + fdata.mapper.tied + ' had a tie that was resolved)&nbsp;&nbsp;&nbsp;&nbsp;\n' : '';
+        tablestr += fdata.stats.newUsers > 0 ? '^(' + fdata.mapper.new + ' new users)&nbsp;&nbsp;&nbsp;&nbsp;\n' : '';
+        tablestr += fdata.stats.disabledUsers > 0 ? '^(' + fdata.mapper.disabled + ' users with flair disabled)&nbsp;&nbsp;&nbsp;&nbsp;\n' : '';
+
+        tablestr += '\n |Definitions\n--:|:--\n';
         tablestr += 'Wins|replies to flair requests that are highest voted at the thread close.\n';
-        tablestr += 'Tries|any reply to the flair requests.';
+        tablestr += 'Tries|any reply to the flair requests.\n';
         tablestr += 'Score|weighted score of `wins * ( wins / tries)`\n\n';
         return tablestr + '\n' + moochers;
       }
 
-      function prepNewUsers() {
-        var newUserStr = '###New users / users with flair disabled:\n\n';
-        for (i = 0; i < fdata.stats.newUsers.length; i++) {
-          var item = fdata.outputPrep[fdata.stats.newUsers[i]];
-          newUserStr += requestHandler(item) + ', ';
-        }
-        return newUserStr.slice(0, -2) + '\n\n';
-      }
-
-      function prepStats() {
-        var statsStr = '###Some stats:\n\n';
+      function outputStats() {
+        var statsStr = '#Some stats:\n\n';
         statsStr += '\\#|Units|Summary\n--:|:--|:--\n';
         statsStr += fdata.stats.morelinksclicked + '|-|"More" links clicked\n';
         statsStr += flair.diff(fdata.times.moreStart, fdata.times.moreEnd) + '|Minutes|Loaded all comments\n';
@@ -401,7 +436,7 @@ javascript: (function () {
         statsStr += fdata.stats.attempts + '|-|Flair attempts\n';
         statsStr += (fdata.stats.winscore / fdata.stats.requests).toFixed(2) + '|Upvotes|Karma average per winning flair\n';
         statsStr += (fdata.stats.attemptscore / fdata.stats.requests).toFixed(2) + '|Upvotes|Karma average per attempt\n';
-        if (applyStart) {
+        if (fdata.times.applyStart) {
           statsStr += (flair.diff(fdata.times.applyStart, fdata.times.applyEnd) || '-') + '|Minutes|Time to set new flairs\n';
           statsStr += (flair.diff(fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests) || '-') + '|Seconds|Average time to set a single flair\n\n';
         }
@@ -409,10 +444,9 @@ javascript: (function () {
       }
 
       var str = '#In this month\'s flair thread: \n\n';
-      str += prepTable();
-      str += '---\n\n#Other information\n\n';
-      str += prepNewUsers();
-      str += prepStats();
+      str += outputMainInformation();
+      str += '---\n\n';
+      str += outputStats();
       str += '\n\n---\n\n[Here\'s a link to the flair thread](' + baseUrl + ')\n';
       str = '<textarea>' + str + '</textarea>';
 
@@ -421,6 +455,8 @@ javascript: (function () {
     },
     setFlairs: function () {
       if (fdata.flairsetter.length && fdata.outputPrep[fdata.flairsetter[0].author].flair_text) {
+        /*Research # POST [/r/subreddit]/api/flaircsv*/
+
         flair.title('Setting flair for ' + fdata.flairsetter[0].author);
 
         var data = {
@@ -487,6 +523,9 @@ javascript: (function () {
         return (diff / qty).toFixed(2);
       }
       return minutes + ':' + ('0' + seconds).slice(-2);
+    },
+    unique: function(value, index, self) {
+      return self.indexOf(value) === index;
     }
   };
 
