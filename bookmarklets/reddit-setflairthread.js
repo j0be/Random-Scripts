@@ -39,7 +39,7 @@ javascript: (function () {
       str += '#flair-output button .author { float: left; opacity: .6; }';
       str += '#flair-output button .points { float: right; opacity: .6; }';
       str += '#flair-output button .text { float: left; clear: both; font-size: 1.2em; margin-top: .3em;}';
-      str += '#flair-output::before { content: ""; display: block; position: fixed; background: rgba(0, 0, 0, .4); top: -100vh; left: -100vw; right: -100vw; bottom: -100vh; z - index: -1; }';
+      str += '#flair-output::before { content: ""; display: block; position: fixed; background: rgba(0, 0, 0, .4); top: -100vh; left: -100vw; right: -100vw; bottom: -100vh; z - index: -1; pointer-events: none; }';
       str += '#flair-output > div { padding: 15px; background: #fff; position: relative; z-index: 1; max-height: 80vh; overflow: auto; }';
       if (!document.getElementById('styler')) {
         styler = document.createElement('style');
