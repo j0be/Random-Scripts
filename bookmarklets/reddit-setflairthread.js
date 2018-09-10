@@ -347,7 +347,7 @@ javascript: (function () {
 
       function prepTable() {
         var i, ii, moochers = '##Moochers\n\nThe users who requested flair, but didn\'t suggest any for anyone else.\n\n';
-        var tablestr = 'User|Successful Flairs|Attempted Flairs|Weighted Successes|Success Permalinks\n';
+        var tablestr = 'User|Wins|Tries|Score|Win Permalinks\n';
         tablestr += ':--|--:|--:|--:|:--\n';
         for (i = 0; i < fdata.output.length; i++)  {
           item = fdata.output[i];
@@ -368,13 +368,17 @@ javascript: (function () {
           }
         }
 
-        tablestr += fdata.stats.ties > 0 ? '\n^(* had a tie that was resolved)    \n' : '';
-        tablestr += '^(*Table sorted by weighted score desc, number of attempts asc, username asc*)\n\n';
+        tablestr += '^(*Table sorted by weighted score desc, number of attempts asc, username asc*)    \n';
+        tablestr += fdata.stats.ties > 0 ? '\n^(* had a tie that was resolved)\n\n' : '';
+        tablestr += ' |Definitions\n--:|:--\n';
+        tablestr += 'Wins|replies to flair requests that are highest voted at the thread close.\n';
+        tablestr += 'Tries|any reply to the flair requests.';
+        tablestr += 'Score|weighted score of `wins * ( wins / tries)`\n\n';
         return tablestr + '\n' + moochers;
       }
 
       function prepNewUsers() {
-        var newUserStr = '\n\n---\n\n##New users / users with flair disabled\n\n';
+        var newUserStr = '###New users / users with flair disabled:\n\n';
         for (i = 0; i < fdata.stats.newUsers.length; i++) {
           var item = fdata.outputPrep[fdata.stats.newUsers[i]];
           newUserStr += requestHandler(item) + ', ';
@@ -383,7 +387,7 @@ javascript: (function () {
       }
 
       function prepStats() {
-        var statsStr = '---\n\n##Some stats: \n\n';
+        var statsStr = '###Some stats:\n\n';
         statsStr += '\\#|Units|Summary\n--:|:--|:--\n';
         statsStr += fdata.stats.morelinksclicked + '|-|"More" links clicked\n';
         statsStr += flair.diff(fdata.times.moreStart, fdata.times.moreEnd) + '|Minutes|Loaded all comments\n';
@@ -395,8 +399,8 @@ javascript: (function () {
         statsStr += flair.diff(fdata.times.tieStart, fdata.times.tieEnd) + '|Minutes|Time to resolve ties\n';
         statsStr += flair.diff(fdata.times.tieStart, fdata.times.tieEnd, fdata.stats.ties) + '|Seconds|Average time to resolve a single tie\n';
         statsStr += fdata.stats.attempts + '|-|Flair attempts\n';
-        statsStr += (fdata.stats.winscore / fdata.stats.requests).toFixed(2) + '|Upvotes|Karma per winning flair\n';
-        statsStr += (fdata.stats.attemptscore / fdata.stats.requests).toFixed(2) + '|Upvotes|Karma per attempt\n';
+        statsStr += (fdata.stats.winscore / fdata.stats.requests).toFixed(2) + '|Upvotes|Karma average per winning flair\n';
+        statsStr += (fdata.stats.attemptscore / fdata.stats.requests).toFixed(2) + '|Upvotes|Karma average per attempt\n';
         if (applyStart) {
           statsStr += (flair.diff(fdata.times.applyStart, fdata.times.applyEnd) || '-') + '|Minutes|Time to set new flairs\n';
           statsStr += (flair.diff(fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests) || '-') + '|Seconds|Average time to set a single flair\n\n';
@@ -406,6 +410,7 @@ javascript: (function () {
 
       var str = '#In this month\'s flair thread: \n\n';
       str += prepTable();
+      str += '---\n\n#Other information\n\n';
       str += prepNewUsers();
       str += prepStats();
       str += '\n\n---\n\n[Here\'s a link to the flair thread](' + baseUrl + ')\n';
