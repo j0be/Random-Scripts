@@ -383,7 +383,7 @@ javascript: (function () {
         } else {
           requestStr += flair.sanitize(item.author);
         }
-        return requestStr + (item.attributes.length ? ' ' + item.attributes.join(', ') : '');
+        return requestStr + (item.attributes.length ? ' ' + item.attributes.join('') : '');
       }
 
       function outputMainInformation() {
