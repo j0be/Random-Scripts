@@ -409,10 +409,10 @@ javascript: (function () {
           }
         }
 
-        tablestr += '^(*Table sorted by weighted score desc, number of attempts asc, username asc*)&nbsp;&nbsp;&nbsp;&nbsp;\n';
-        tablestr += fdata.stats.ties > 0 ? '^(' + fdata.mapper.tied + ' had a tie that was resolved)&nbsp;&nbsp;&nbsp;&nbsp;\n' : '';
-        tablestr += fdata.stats.newUsers > 0 ? '^(' + fdata.mapper.new + ' new users)&nbsp;&nbsp;&nbsp;&nbsp;\n' : '';
-        tablestr += fdata.stats.disabledUsers > 0 ? '^(' + fdata.mapper.disabled + ' users with flair disabled)&nbsp;&nbsp;&nbsp;&nbsp;\n' : '';
+        tablestr += '^(*Table sorted by weighted score desc, number of attempts asc, username asc*)&nbsp;&nbsp;&nbsp;&nbsp;    \n';
+        tablestr += fdata.stats.ties > 0 ? '^(' + fdata.mapper.tied + ' had a tie that was resolved)&nbsp;&nbsp;&nbsp;&nbsp;    \n' : '';
+        tablestr += fdata.stats.newUsers > 0 ? '^(' + fdata.mapper.new + ' new users)&nbsp;&nbsp;&nbsp;&nbsp;    \n' : '';
+        tablestr += fdata.stats.disabledUsers > 0 ? '^(' + fdata.mapper.disabled + ' users with flair disabled)&nbsp;&nbsp;&nbsp;&nbsp;    \n' : '';
 
         tablestr += '\n |Definitions\n--:|:--\n';
         tablestr += 'Wins|replies to flair requests that are highest voted at the thread close.\n';
@@ -445,7 +445,7 @@ javascript: (function () {
 
       var str = '#In this month\'s flair thread: \n\n';
       str += outputMainInformation();
-      str += '---\n\n';
+      str += '\n\n---\n\n';
       str += outputStats();
       str += '\n\n---\n\n[Here\'s a link to the flair thread](' + baseUrl + ')\n';
       str = '<textarea>' + str + '</textarea>';
