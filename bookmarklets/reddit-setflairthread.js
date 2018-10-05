@@ -435,7 +435,7 @@ javascript: (function () {
         statsStr += flair.diff(fdata.times.tieStart, fdata.times.tieEnd, fdata.stats.ties) + '|Seconds|Average time to resolve a single tie\n';
         statsStr += fdata.stats.attempts + '|-|Flair attempts\n';
         statsStr += (fdata.stats.winscore / fdata.stats.requests).toFixed(2) + '|Upvotes|Karma average per winning flair\n';
-        statsStr += (fdata.stats.attemptscore / fdata.stats.requests).toFixed(2) + '|Upvotes|Karma average per attempt\n';
+        statsStr += (fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2) + '|Upvotes|Karma average per attempt\n';
         if (fdata.times.applyStart) {
           statsStr += (flair.diff(fdata.times.applyStart, fdata.times.applyEnd) || '-') + '|Minutes|Time to set new flairs\n';
           statsStr += (flair.diff(fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests) || '-') + '|Seconds|Average time to set a single flair\n\n';
