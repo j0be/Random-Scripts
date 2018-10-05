@@ -23,7 +23,7 @@ javascript: (function () {
       applyEnd: new Date(),
     },
     mapper: {
-      tied: '*',
+      tied: '\*',
       new: '&#8224;',
       disabled: '&#8225;'
     }
