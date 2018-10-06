@@ -4,6 +4,7 @@ javascript: (function () {
     output: [],
     outputPrep: {},
     more: [],
+    cantFollowInstructions: [],
     stats: {
       requests: 0,
       attempts: 0,
@@ -23,7 +24,7 @@ javascript: (function () {
       applyEnd: new Date(),
     },
     mapper: {
-      tied: '\*',
+      tied: '\\*',
       new: '&#8224;',
       disabled: '&#8225;'
     }
@@ -90,9 +91,7 @@ javascript: (function () {
         }).then(function (response) {
           return response.json();
         }).then(function (data) {
-          fdata.modhash = data[1].data.modhash;
-          flair.apply(data[1].data.children);
-          flair.get.more();
+          flair.get.handler(data);
         });
       },
       more: function () {
@@ -108,14 +107,7 @@ javascript: (function () {
           }).then(function (response) {
             return response.json();
           }).then(function (data) {
-            fdata.modhash = data[1].data.modhash;
-            fdata.stats.morelinksclicked++;
-            fdata.more.shift();
-            var items = data[1].data.children;
-            if (items[0]) {
-              flair.apply(items);
-            }
-            flair.get.more();
+            flair.get.handler(data, true);
           });
         } else {
           fdata.times.moreEnd = new Date();
@@ -123,6 +115,19 @@ javascript: (function () {
           fdata.times.tieStart = new Date();
           flair.checkTies();
         }
+      },
+      handler: function (data, isMore) {
+        if (isMore) {
+          fdata.stats.morelinksclicked++;
+          fdata.more.shift();
+        }
+
+        fdata.modhash = data[1].data.modhash;
+        var items = data[1].data.children;
+        if (items[0]) {
+          flair.apply(items);
+        }
+        flair.get.more();
       }
     },
     apply: function (data, index) {
@@ -154,13 +159,25 @@ javascript: (function () {
               flair.apply(item.replies.data.children);
             }
           } else if (fdata.requests[parentid] && !item.removed && !item.spam) {
-            var flair_text = flair.decode(item.body_html) || item.body;
-            fdata.requests[parentid].children.push({
+            var flair_text = flair.decode(flair.decode(item.body_html).replace(/<.*?>/gm, '')).replace(/[\n\r]/g,'') || item.body;
+            flair_text = flair_text.match(/\[.{0,62}\]/m) ? flair_text.match(/\[.{0,62}\]/m)[0] : flair_text;
+
+            var followedInstructions = flair_text.length <= 64 && flair_text.match(/\[.{0,62}\]/m);
+            if (flair_text.length <= 62 && !flair_text.match(/^\[/)) { flair_text = '[' + flair_text; } /*Leading bracket*/
+            if (flair_text.length <= 63 && !flair_text.match(/\]$/)) { flair_text += ']'; } /*Trailing bracket*/
+
+            flair_text = flair_text.match(/\[.{0,62}\]/m) ? flair_text.match(/\[.{0,62}\]/m)[0] : '[' + item.author + ' can\'t read instructions]';
+            var attempt = {
               id: item.id,
               author: item.author,
               score: item.score,
-              text: flair_text.match(/\[.{0,62}\]/) ? flair_text.match(/\[.{0,62}\]/)[0] : '[]'
-            });
+              text: flair_text
+            };
+
+            fdata.requests[parentid].children.push(attempt);
+            if (!followedInstructions) {
+              fdata.cantFollowInstructions.push(attempt);
+            }
           } else {
             console.log('Somehow I have a child comment with no parent');
           }
@@ -387,8 +404,10 @@ javascript: (function () {
       }
 
       function outputMainInformation() {
-        var i, ii, moochers = '###Moochers\n\nThe users who requested flair, but didn\'t suggest any for anyone else.\n\n';
-        var tablestr = 'User|Wins|Tries|Score|Win Permalinks\n';
+        var i, ii,
+          definitionstr = '',
+          moocherstr = '###Moochers\n\nThe users who requested flair, but didn\'t suggest any for anyone else.\n\n',
+          tablestr = 'User|Wins|Tries|Score|Win Permalinks\n';
         tablestr += ':--|--:|--:|--:|:--\n';
         for (i = 0; i < fdata.output.length; i++)  {
           item = fdata.output[i];
@@ -405,20 +424,21 @@ javascript: (function () {
             }
             tablestr += '\n';
           } else {
-            moochers += requestHandler(item) + ', ';
+            moocherstr += requestHandler(item) + ', ';
           }
         }
 
-        tablestr += '^(*Table sorted by weighted score desc, number of attempts asc, username asc*)&nbsp;&nbsp;&nbsp;&nbsp;    \n';
-        tablestr += fdata.stats.ties > 0 ? '^(' + fdata.mapper.tied + ' had a tie that was resolved)&nbsp;&nbsp;&nbsp;&nbsp;    \n' : '';
-        tablestr += fdata.stats.newUsers > 0 ? '^(' + fdata.mapper.new + ' new users)&nbsp;&nbsp;&nbsp;&nbsp;    \n' : '';
-        tablestr += fdata.stats.disabledUsers > 0 ? '^(' + fdata.mapper.disabled + ' users with flair disabled)&nbsp;&nbsp;&nbsp;&nbsp;    \n' : '';
+        tablestr += '^(*Table sorted by weighted score desc, number of attempts asc, username asc*)\n\n';
 
-        tablestr += '\n |Definitions\n--:|:--\n';
-        tablestr += 'Wins|replies to flair requests that are highest voted at the thread close.\n';
-        tablestr += 'Tries|any reply to the flair requests.\n';
-        tablestr += 'Score|weighted score of `wins * ( wins / tries)`\n\n';
-        return tablestr + '\n' + moochers;
+        
+        definitionstr += '\n |Definitions\n--:|:--\n';
+        definitionstr += fdata.stats.ties > 0 ? fdata.mapper.tied.replace(/\\/g,'') + '|had a tie that was resolved\n' : '';
+        definitionstr += fdata.stats.newUsers > 0 ? fdata.mapper.new + '|new users\n' : '';
+        definitionstr += fdata.stats.disabledUsers > 0 ? fdata.mapper.disabled + '|users with flair disabled\n' : '';
+        definitionstr += 'Wins|replies to flair requests that are highest voted at the thread close.\n';
+        definitionstr += 'Tries|any reply to the flair requests.\n';
+        definitionstr += 'Score|weighted score of `wins * ( wins / tries)`\n\n';
+        return tablestr + '\n' + moocherstr.slice(0, -2) + '\n\n' + definitionstr;
       }
 
       function outputStats() {
@@ -443,6 +463,15 @@ javascript: (function () {
         return statsStr;
       }
 
+      function getRuleBreakers() {
+        var ruleBreakerStr = 'These people just couldn\'t seem to read simple instructions: ';
+        for (i = 0; i < fdata.cantFollowInstructions.length; i++) {
+          var item = fdata.cantFollowInstructions[i];
+          ruleBreakerStr += '[' + item.author + '](' + baseUrl + '/_/' + item.id + '?context=1), ';
+        }
+        return ruleBreakerStr;
+      }
+
       var str = '#In this month\'s flair thread: \n\n';
       str += outputMainInformation();
       str += '\n\n---\n\n';
@@ -450,8 +479,11 @@ javascript: (function () {
       str += '\n\n---\n\n[Here\'s a link to the flair thread](' + baseUrl + ')\n';
       str = '<textarea>' + str + '</textarea>';
 
+
+      var commentStr = '<textarea>' + getRuleBreakers() + '</textarea>';
+
       flair.title('Done');
-      flair.output(str);
+      flair.output(str + commentStr);
     },
     setFlairs: function () {
       if (fdata.flairsetter.length && fdata.outputPrep[fdata.flairsetter[0].author].flair_text) {
