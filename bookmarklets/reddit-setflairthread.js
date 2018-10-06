@@ -179,7 +179,7 @@ javascript: (function () {
               fdata.cantFollowInstructions.push(attempt);
             }
           } else {
-            console.log('Somehow I have a child comment with no parent');
+            console.log('Somehow I have a child comment with no parent: ' + item.id);
           }
         }
       }
@@ -430,7 +430,7 @@ javascript: (function () {
 
         tablestr += '^(*Table sorted by weighted score desc, number of attempts asc, username asc*)\n\n';
 
-        
+
         definitionstr += '\n |Definitions\n--:|:--\n';
         definitionstr += fdata.stats.ties > 0 ? fdata.mapper.tied.replace(/\\/g,'') + '|had a tie that was resolved\n' : '';
         definitionstr += fdata.stats.newUsers > 0 ? fdata.mapper.new + '|new users\n' : '';
