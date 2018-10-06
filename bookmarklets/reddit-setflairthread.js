@@ -449,8 +449,8 @@ javascript: (function () {
         statsStr += flair.diff(fdata.times.moreStart, fdata.times.moreEnd, fdata.stats.morelinksclicked + 1) + '|Seconds|Average "more" link load time\n';
         statsStr += fdata.stats.requests + '|-|Flair requests\n';
         statsStr += (fdata.stats.attempts / fdata.stats.requests).toFixed(2) + '|-|Attempts per flair request\n';
-        statsStr += fdata.stats.ties + '|-|Requests ended in ties\n';
-        statsStr += (100 * (fdata.stats.ties / fdata.stats.requests)).toFixed(1) + '%|-|Requests ended in ties\n';
+        statsStr += fdata.stats.ties > 0 ? fdata.stats.ties + '|-|Requests ended in ties\n' : '';
+        statsStr += fdata.stats.ties > 0 ? (100 * (fdata.stats.ties / fdata.stats.requests)).toFixed(1) + '%|-|Requests ended in ties\n' : '';
         statsStr += flair.diff(fdata.times.tieStart, fdata.times.tieEnd) + '|Minutes|Time to resolve ties\n';
         statsStr += flair.diff(fdata.times.tieStart, fdata.times.tieEnd, fdata.stats.ties) + '|Seconds|Average time to resolve a single tie\n';
         statsStr += fdata.stats.attempts + '|-|Flair attempts\n';
@@ -460,6 +460,8 @@ javascript: (function () {
           statsStr += (flair.diff(fdata.times.applyStart, fdata.times.applyEnd) || '-') + '|Minutes|Time to set new flairs\n';
           statsStr += (flair.diff(fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests) || '-') + '|Seconds|Average time to set a single flair\n\n';
         }
+        statsStr += fdata.stats.newUsers > 0 ? fdata.mapper.new + '|-|users requested flair for the first time\n' : '';
+        statsStr += fdata.stats.disabledUsers > 0 ? fdata.mapper.disabled + '|-|users had their flair disabled when flair was applied\n' : '';
         return statsStr;
       }
 
