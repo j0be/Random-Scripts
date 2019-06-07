@@ -179,7 +179,9 @@ javascript: (function () {
               fdata.cantFollowInstructions.push(attempt);
             }
           } else {
-            console.log('Somehow I have a child comment with no parent: ' + item.id);
+            if (confirm('Somehow I have a child comment with no parent: ' + item.id)) {
+              document.location.href = '/r/CenturyClub/comments/' + flair.thread_id + '/x/' + item.id;
+            }
           }
         }
       }
@@ -214,8 +216,12 @@ javascript: (function () {
         }
         data[index].data.checkedBlank = true;
         flair.apply(data, index);
+
+        if (Object.keys(fdata.requests).length === data.length && !fdata.more.length) {
+          flair.get.more();
+        }
       });
-      
+
     },
     checkTies: function () {
       var i, key, str, index = 0;
