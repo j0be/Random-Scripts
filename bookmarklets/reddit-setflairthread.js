@@ -466,8 +466,8 @@ javascript: (function () {
           statsStr += (flair.diff(fdata.times.applyStart, fdata.times.applyEnd) || '-') + '|Minutes|Time to set new flairs\n';
           statsStr += (flair.diff(fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests) || '-') + '|Seconds|Average time to set a single flair\n\n';
         }
-        statsStr += fdata.stats.newUsers > 0 ? fdata.mapper.new + '|-|users requested flair for the first time\n' : '';
-        statsStr += fdata.stats.disabledUsers > 0 ? fdata.mapper.disabled + '|-|users had their flair disabled when flair was applied\n' : '';
+        statsStr += fdata.stats.newUsers > 0 ? fdata.stats.newUsers + '|-|users requested flair for the first time\n' : '';
+        statsStr += fdata.stats.disabledUsers > 0 ? fdata.stats.disabledUsers + '|-|users had their flair disabled when flair was applied\n' : '';
         return statsStr;
       }
 
