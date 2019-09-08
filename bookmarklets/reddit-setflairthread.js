@@ -1,573 +1,584 @@
 javascript: (function () {
-  window.fdata = typeof window.fdata !== 'undefined' && window.fdata.gathered ? window.fdata : {
-    requests: {},
-    output: [],
-    outputPrep: {},
-    more: [],
-    cantFollowInstructions: [],
-    stats: {
-      requests: 0,
-      attempts: 0,
-      attemptscore: 0,
-      winscore: 0,
-      ties: 0,
-      morelinksclicked: 0,
-      newUsers: 0,
-      disabledUsers: 0
-    },
-    times: {
-      moreStart: new Date(),
-      moreEnd: new Date(),
-      tieStart: new Date(),
-      tieEnd: new Date(),
-      applyStart: new Date(),
-      applyEnd: new Date(),
-    },
-    mapper: {
-      tied: '\\*',
-      new: '&#8224;',
-      disabled: '&#8225;'
-    }
-  };
-
-  var flair = {
-    thread_id: document.location.href.split('/')[6],
-    init: function () {
-      var styler,
-        str = '#flair-output { color: #000; position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 999; overflow: visible; }';
-      str += '#flair-output button { width: 100%; margin: .5em 0; display: block; text-align: left; text-transform: none; }';
-      str += '#flair-output button a { pointer-events: none; }';
-      str += '#flair-output button .author { float: left; opacity: .6; }';
-      str += '#flair-output button .points { float: right; opacity: .6; }';
-      str += '#flair-output button .text { float: left; clear: both; font-size: 1.2em; margin-top: .3em;}';
-      str += '#flair-output::before { content: ""; display: block; position: fixed; background: rgba(0, 0, 0, .4); top: -100vh; left: -100vw; right: -100vw; bottom: -100vh; z - index: -1; pointer-events: none; }';
-      str += '#flair-output > div { padding: 15px; background: #fff; position: relative; z-index: 1; max-height: 80vh; overflow: auto; }';
-      if (!document.getElementById('styler')) {
-        styler = document.createElement('style');
-        styler.setAttribute('id', 'styler');
-        styler.innerHTML = str;
-        document.head.appendChild(styler);
-      } else {
-        styler = document.getElementById('styler');
-        styler.innerHTML = str;
-      }
-
-      fdata.output = [];
-      fdata.outputPrep = {};
-
-      if (!fdata.gathered) {
-        fdata.times.moreStart = new Date();
-        flair.get.allComments();
-        return 'Getting all comments';
-      }
-      flair.checkTies();
-      return 'skipping load';
-    },
-    title: function (str) {
-      document.title = str;
-      flair.output(str);
-    },
-    output: function (str) {
-      var output;
-      if (!document.getElementById('flair-output')) {
-        output = document.createElement('div');
-        output.setAttribute('id', 'flair-output');
-        output.innerHTML = '<div>'+str+'</div>';
-        document.body.appendChild(output);
-      } else {
-        output = document.getElementById('flair-output');
-        output.innerHTML = '<div>' + str + '</div>';
-      }
-    },
-    get: {
-      allComments: function () {
-        flair.title('Getting base comments');
-        fetch('/r/CenturyClub/comments/' + flair.thread_id + '/x/.json?limit=1500', {
-          credentials: 'include',
-          headers: {
-            'cookie': document.cookie
-          },
-          referrer: document.location.protocol + '//' + document.location.host
-        }).then(function (response) {
-          return response.json();
-        }).then(function (data) {
-          flair.get.handler(data);
-        });
-      },
-      more: function () {
-        if (fdata.more.length) {
-          fdata.gathered = false;
-          flair.title('Fetching more links: ' + fdata.more.length + ' remaining');
-          fetch('/r/CenturyClub/comments/' + flair.thread_id + '/x/' + fdata.more[0] + '.json?limit=1500', {
-            credentials: 'include',
-            headers: {
-              'cookie': document.cookie
+    /* Keep track of some flair data */
+    window.fdata = {
+        requests: {},
+        stream: {
+            threadId: document.location.href.split('/')[6],
+            users: {},
+            moreLinks: [],
+            flairChecks: []
+        },
+        stats: {
+            requests: 0,
+            attempts: 0,
+            attemptscore: 0,
+            winscore: 0,
+            ties: 0,
+            moreLinksClicked: 0,
+            newUsers: 0,
+            disabledUsers: 0
+        },
+        times: {
+            fullStart: new Date(),
+            fullEnd: '',
+            loadStart: '',
+            loadEnd: '',
+            moreStart: '',
+            moreEnd: '',
+            tieStart: '',
+            tieEnd: '',
+            applyStart: '',
+            applyEnd: ''
+        },
+        mapper: {
+            tied: '\\*',
+            new: '&#8224;',
+            disabled: '&#8225;'
+        }
+    };
+    /* The actual flair application */
+    var flair = {
+        setup: {
+            init: function () {
+                flair.setup.initCSS();
+                flair.get.allComments();
             },
-            referrer: document.location.protocol + '//' + document.location.host
-          }).then(function (response) {
-            return response.json();
-          }).then(function (data) {
-            flair.get.handler(data, true);
-          });
-        } else {
-          fdata.times.moreEnd = new Date();
-          fdata.gathered = true;
-          fdata.times.tieStart = new Date();
-          flair.checkTies();
-        }
-      },
-      handler: function (data, isMore) {
-        if (isMore) {
-          fdata.stats.morelinksclicked++;
-          fdata.more.shift();
-        }
+            initCSS: function () {
+                var css = '#flair-output { color: #000; position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 999; overflow: visible; }';
+                css += '#flair-output button { width: 100%; margin: .5em 0; display: block; text-align: left; text-transform: none; }';
+                css += '#flair-output button a { pointer-events: none; }';
+                css += '#flair-output button .author { float: left; opacity: .6; }';
+                css += '#flair-output button .points { float: right; opacity: .6; }';
+                css += '#flair-output button .text { float: left; clear: both; font-size: 1.2em; margin-top: .3em;}';
+                css += '#flair-output::before { content: ""; display: block; position: fixed; background: rgba(0, 0, 0, .4); top: -100vh; left: -100vw; right: -100vw; bottom: -100vh; z - index: -1; pointer-events: none; }';
+                css += '#flair-output > div { padding: 15px; background: #fff; position: relative; z-index: 1; max-height: 80vh; overflow: auto; }';
 
-        fdata.modhash = data[1].data.modhash;
-        var items = data[1].data.children;
-        if (items[0]) {
-          flair.apply(items);
-        }
-        flair.get.more();
-      }
-    },
-    apply: function (data, index) {
-      for (var i = index || 0; i < data.length; i++) {
-        if (data[i].kind === 'more') {
-          fdata.more = fdata.more.concat(data[i].data.children);
-        } else {
-          var item = data[i].data;
-          var parentid = item.parent_id.replace(/.*?_/, '');
-
-          if (fdata.more.indexOf(item.id) !== -1) {
-            fdata.more.splice(fdata.more.indexOf(item.id), 1);
-          }
-
-          if (item.parent_id === item.link_id) {
-            if (!fdata.requests[item.id] && !item.removed && !item.spam) {
-              fdata.requests[item.id] = {
-                id: item.id,
-                author: item.author,
-                attributes: [],
-                class: item.author_flair_css_class,
-                children: [],
-              };
+                var styler = document.createElement('style');
+                styler.setAttribute('id', 'styler');
+                styler.innerHTML = css;
+                document.head.appendChild(styler);
             }
-            if (!item.author_flair_text && item.author !== '[deleted]' && !item.checkedBlank) {
-              flair.checkBlankFlair(item.id, item.author, data, i);
-              break;
-            } else if (item.replies && item.replies.data.children) {
-              flair.apply(item.replies.data.children);
-            }
-          } else if (fdata.requests[parentid] && !item.removed && !item.spam) {
-            var flair_text = flair.decode(flair.decode(item.body_html).replace(/<.*?>/gm, '')).replace(/[\n\r]/g,'') || item.body;
-            flair_text = flair_text.match(/\[.{0,62}\]/m) ? flair_text.match(/\[.{0,62}\]/m)[0] : flair_text;
-
-            var followedInstructions = flair_text.length <= 64 && flair_text.match(/\[.{0,62}\]/m);
-            if (flair_text.length <= 62 && !flair_text.match(/^\[/)) { flair_text = '[' + flair_text; } /*Leading bracket*/
-            if (flair_text.length <= 63 && !flair_text.match(/\]$/)) { flair_text += ']'; } /*Trailing bracket*/
-
-            flair_text = flair_text.match(/\[.{0,62}\]/m) ? flair_text.match(/\[.{0,62}\]/m)[0] : '[' + item.author + ' can\'t read instructions]';
-            var attempt = {
-              id: item.id,
-              author: item.author,
-              score: item.score,
-              text: flair_text
-            };
-
-            fdata.requests[parentid].children.push(attempt);
-            if (!followedInstructions) {
-              fdata.cantFollowInstructions.push(attempt);
-            }
-          } else {
-            if (confirm('Somehow I have a child comment with no parent: ' + item.id)) {
-              document.location.href = '/r/CenturyClub/comments/' + flair.thread_id + '/x/' + item.id;
-            }
-          }
-        }
-      }
-    },
-    checkBlankFlair: function(id, author, data, index) {
-      flair.title('Checking blank flair for ' + author);
-      var esc = encodeURIComponent,
-        params = {
-          name: author,
-          r: r.config.cur_listing,
-          uh: fdata.modhash
         },
-        paramStr = Object.keys(params)
-          .map(function(k) { return esc(k) + '=' + esc(params[k]); })
-          .join('&');
+        get: {
+            allComments: function () {
+                flair.output.title('Getting base comments');
+                fdata.times.loadStart = new Date();
+                fetch('/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/.json?limit=1500', {
+                    credentials: 'include',
+                    headers: { 'cookie': document.cookie },
+                    referrer: document.location.protocol + '//' + document.location.host
+                }).then(function (response) {
+                    return response.json();
+                }).then(function (data) {
+                    fdata.stream.modhash = data[1].data.modhash;
+                    flair.parse.comments(data[1].data);
+                });
+            },
+            more: function(id) {
+                flair.output.title('Getting more comments: ' + fdata.stream.moreLinks[0]);
+                fetch('/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + fdata.stream.moreLinks[0] + '.json?limit=1500', {
+                    referrer: document.location.protocol + '//' + document.location.host,
+                    credentials: 'include',
+                    headers: {
+                        'cookie': document.cookie
+                    },
+                }).then(function (response) {
+                    return response.json();
+                }).then(function (data) {
+                    fdata.stats.moreLinksClicked ++;
+                    flair.parse.more(data);
+                });
+            },
+            blankFlair: function(username) {
+                flair.output.title('Checking blank flair for ' + username);
+                var esc = encodeURIComponent;
+                var params = {
+                        name: username,
+                        r: r.config.cur_listing,
+                        uh: fdata.modhash
+                    };
+                var paramStr = Object.keys(params).map(function (k) { return esc(k) + '=' + esc(params[k]); }).join('&');
 
-      fetch('/r/CenturyClub/api/flairlist.json?' + paramStr, {
-        credentials: 'include',
-        headers: {
-          'cookie': document.cookie
+                fetch('/r/' + r.config.cur_listing + '/api/flairlist.json?' + paramStr, {
+                    referrer: document.location.protocol + '//' + document.location.host,
+                    credentials: 'include',
+                    headers: {
+                        'cookie': document.cookie
+                    }
+                }).then(function (response) {
+                    return response.json();
+                }).then(flair.parse.blankFlair);
+            }
         },
-        referrer: document.location.protocol + '//' + document.location.host
-      }).then(function (response) {
-        return response.json();
-      }).then(function (responseData) {
-        if (!!responseData.users[0].flair_text) {
-          fdata.stats.disabledUsers ++;
-          fdata.requests[id].attributes.push(fdata.mapper.disabled);
-        } else {
-          fdata.stats.newUsers ++;
-          fdata.requests[id].attributes.push(fdata.mapper.new);
-        }
-        data[index].data.checkedBlank = true;
-        flair.apply(data, index);
+        set: {
+            flairs: function() {
+                /*Research # POST [/r/subreddit]/api/flaircsv*/
+                fdata.times.applyStart = new Date();
 
-        if (Object.keys(fdata.requests).length === data.length && !fdata.more.length) {
-          flair.get.more();
-        }
-      });
+                /* Prepare the flair array */
+                fdata.stream.flairs = Object.keys(fdata.stream.users).map(function(username) {
+                    return fdata.stream.users[username];
+                }).filter(function(user) {
+                    return !! user.flairs.length;
+                });
+                flair.set.flair();
+            },
+            flair: function() {
+                if (fdata.stream.flairs.length) {
+                    var user = fdata.stream.flairs[0];
+                    var reply = user.flairs.sort(flair.helpers.sort.weight)[0];
 
-    },
-    checkTies: function () {
-      var i, key, str, index = 0;
-      flair.title('Breaking ties');
+                    flair.output.title('Setting flair for ' + user.name);
 
-      function tiebreaker(event) {
-        var el = event.currentTarget,
-          parent = el.getAttribute('data-parent'),
-          index = el.getAttribute('data-index');
+                    var data = {
+                        name: user.name,
+                        text: reply.text,
+                        css_class: fdata.stream.userArr[0].name === user.name ? 'monthlywinner' : '',
+                        id: '#flair-xxxxx',
+                        r: r.config.cur_listing,
+                        uh: fdata.stream.modhash,
+                        renderstyle: 'json'
+                    };
+                    var form_data = new FormData();
+                    for (var key in data) { form_data.append(key, data[key]); }
 
-        fdata.requests[parent].tieBroken = true;
-        fdata.requests[parent].children[index].winner = true;
-
-        flair.checkTies();
-      }
-
-      var thereAreTies = false;
-      for (key in fdata.requests) {
-        if (fdata.requests.hasOwnProperty(key)) {
-          index++;
-          if (!fdata.requests[key].tieBroken) {
-            flair.title('Breaking ties: ' + index + '/' + Object.keys(fdata.requests).length);
-            flair.tempArr = [];
-            fdata.requests[key].children = fdata.requests[key].children.sort(function (a, b) {
-              return (a.score > b.score ? -1 : (a.score < b.score ? 1 : 0));
-            });
-
-            if (fdata.requests[key].children.length) {
-              var children = fdata.requests[key].children,
-                highScore = children[0].score;
-
-              for (i = 0; i < children.length; i++) {
-                if (children[i].score === highScore) {
-                  fdata.requests[key].children[i].index = i;
-                  flair.tempArr.push(children[i]);
+                    fetch('/api/flair', {
+                        referrer: document.location.protocol + '//' + document.location.host,
+                        headers: {
+                            'cookie': document.cookie
+                        },
+                        credentials: 'include',
+                        body: form_data,
+                        method: 'POST'
+                    }).then(function (response) {
+                        return response.json();
+                    }).then(function (data) {
+                        fdata.stream.flairs.shift();
+                        flair.set.flair();
+                    });
+                } else {
+                    fdata.times.applyEnd = new Date();
+                    flair.output.summary();
                 }
-              }
-            } else if (!fdata.requests[key].alerted) {
-              fdata.requests[key].alerted = true;
-              alert(fdata.requests[key].author + ' has a request with no responses');
+            },
+            winner: function(reply) {
+                reply.winner = true;
+                fdata.stats.winscore += reply.score;
+                flair.helpers.getUser(reply.parentName).flairs.push({
+                    text: reply.text,
+                    score: reply.score
+                });
             }
+        },
+        parse: {
+            comments: function (data) {
+                if (data) {
+                    data.children.forEach(function (comment) {
+                        flair.parse.comment(comment);
+                    });
+                }
 
-            if (flair.tempArr.length > 1) {
-              thereAreTies = true;
-              fdata.stats.ties++;
+                if (fdata.stream.moreLinks.length + fdata.stream.flairChecks.length) {
+                    if (fdata.stream.moreLinks.length) {
+                        /* Get a more link */
+                        fdata.times.moreStart = fdata.times.moreStart || new Date();
+                        flair.get.more(fdata.stream.moreLinks[0]);
+                    } else {
+                        /* Check a blank flair */
+                        fdata.times.moreEnd = fdata.times.moreEnd || new Date();
+                        flair.get.blankFlair(fdata.stream.flairChecks[0]);
+                    }
+                } else {
+                    flair.output.title('Loaded all comments and user info');
+                    fdata.times.moreEnd = fdata.times.moreEnd || new Date();
+                    fdata.times.loadEnd = new Date();
+                    flair.resolve.ties();
+                }
+            },
+            comment: function (comment) {
+                if (comment.kind === 'more') {
+                    fdata.stream.moreLinks.push(comment.data.id);
+                } else {
+                    var isRequest = comment.data.parent_id === 't3_' + fdata.stream.threadId;
+                    flair.parse.checkFlair(comment.data);
+                    if (isRequest) {
+                        flair.parse.request(comment.data);
+                    } else {
+                        flair.parse.reply(comment.data);
+                    }
+                }
+            },
+            checkFlair: function (comment) {
+                if (!comment.author_flair_text && comment.author !== '[deleted]') {
+                    if (!fdata.stream.flairChecks.includes(comment.author)) {
+                        fdata.stream.flairChecks.push(comment.author);
+                    }
+                }
+            },
+            blankFlair: function (data) {
+                var username = data.users[0].user;
+                var user = flair.helpers.getUser(username);
+                if (!!data.users[0].flair_text) {
+                    fdata.stats.disabledUsers++;
+                    user.attributes.push(fdata.mapper.disabled);
+                } else {
+                    fdata.stats.newUsers++;
+                    user.attributes.push(fdata.mapper.new);
+                }
+                fdata.stream.flairChecks.shift();
+                flair.parse.comments();
+            },
+            more: function (data) {
+                fdata.stream.moreLinks.shift();
+                flair.parse.comments(data[1].data);
+            },
+            request: function (comment) {
+                fdata.stats.requests ++;
+                fdata.requests[comment.name] = {
+                    id: comment.id,
+                    name: comment.author,
+                    replies: []
+                };
+                if (comment.replies) {
+                    comment.replies.data.children.forEach(flair.parse.comment);
+                } else {
+                    debugger;
+                    alert('This request had no replies');
+                }
+            },
+            reply: function (comment) {
+                if (fdata.requests[comment.parent_id]) {
+                    if (!comment.removed && !comment.spam) {
+                        fdata.requests[comment.parent_id].replies.push({
+                            ids: [comment.id],
+                            name: comment.author,
+                            parentName: fdata.requests[comment.parent_id].name,
+                            score: comment.score,
+                            text: flair.parse.flairText(comment)
+                        });
+                        fdata.stats.attempts ++;
+                        fdata.stats.attemptscore += comment.score;
+                    }
+                } else if (confirm('Somehow I have a child comment with no parent: ' + comment.id)) {
+                    window.open('http://reddit.com/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + comment.id + '?context=3');
+                }
+            },
+            flairText: function(comment) {
+                var flairText = flair.helpers.decode(flair.helpers.decode(comment.body_html).replace(/<.*?>/gm, '')).replace(/[\n\r]/g, '') || comment.body;
+                flairText = flairText.match(/\[.{0,62}\]/m) ? flairText.match(/\[.{0,62}\]/m)[0] : flairText;
+                if (flairText.length <= 62 && !flairText.match(/^\[/)) { flairText = '[' + flairText; } /*Leading bracket*/
+                if (flairText.length <= 63 && !flairText.match(/\]$/)) { flairText += ']'; } /*Trailing bracket*/
 
-              str = '<div class="parent_author">Flair for /u/' + fdata.requests[key].author + ' has a tie. Choose a winner.</div>';
-              for (i = 0; i < flair.tempArr.length; i++) {
-                fdata.requests[key].children[flair.tempArr[i].index].tied = true;
-                str += '<button class="tiebreaker" data-parent="' + key + '" data-index="' + flair.tempArr[i].index + '"><div><span class="author">/u/' + flair.tempArr[i].author + '</span> <span class="points">' + flair.tempArr[i].score + ' points</span></div><div class="text">' + flair.tempArr[i].text + '</div></button>';
-              }
-              flair.output(str);
+                return flairText;
+            },
+            tiedReplies: function(replies) {
+                var highScore = Math.max.apply(null, replies.map(function(reply) {
+                    return reply.score;
+                }));
 
-              var buttons = document.getElementsByClassName('tiebreaker');
+                var highScoreReplies = replies.filter(function(reply) {
+                    return reply.score === highScore;
+                });
+                highScoreReplies.forEach(function (reply) {
+                    flair.helpers.getUser(reply.name).ties++;
+                });
 
-              for (i = 0; i < buttons.length; i++) {
-                buttons[i].addEventListener('click', tiebreaker);
-              }
+                if (highScoreReplies.length > 1) {
+                    /* Return the ties to be resolved */
+                    return highScoreReplies;
+                }
 
-              break;
-            } else if (fdata.requests[key].children.length) {
-              fdata.requests[key].children[0].winner = true;
+                /* There was no tie, so mark it a winner */
+                var winner = highScoreReplies[0];
+                return [];
             }
-          }
-        }
-      }
+        },
+        resolve: {
+            ties: function () {
+                if (!fdata.stream.hasOwnProperty('ties')) {
+                    fdata.times.tieStart = new Date();
+                    fdata.stream.ties = Object.keys(fdata.requests).filter(function (key) {
+                        var request = fdata.requests[key];
+                        request.ties = flair.parse.tiedReplies(request.replies);
+                        return !!request.ties.length;
+                    });
+                    fdata.stats.ties = fdata.stream.ties.length;
+                }
 
-      if (!thereAreTies) {
-        fdata.times.tieEnd = new Date();
-        flair.resolveData();
-      }
-    },
-    resolveData: function () {
-      var key, i, request, item;
+                if (fdata.stream.ties.length) {
+                    flair.output.title('Resolving ties: ' + fdata.stream.ties.length + ' remaining');
 
-      fdata.stats.requests = 0;
-      fdata.stats.attempts = 0;
-      fdata.stats.attemptscore = 0;
+                    var key = fdata.stream.ties[0];
+                    var request = fdata.requests[key];
+                    if (request && request.ties) {
+                        var str = '<div>Resolving ties: ' + fdata.stream.ties.length + ' remaining</div>';
+                        str += '<div class="parent_author">Flair for /u/' + request.name + ' has a tie. Choose a winner.</div>';
+                        request.ties.forEach(function (reply, index) {
+                            str += '<button class="tiebreaker" data-parent="' + key + '" data-index="' + index + '">' +
+                                '<div><span class="author">/u/' + reply.name + '</span>  <span class="points">' + reply.score + ' points</span></div>' +
+                                '<div class="text">' + reply.text + '</div>' +
+                                '</button>';
+                        });
+                        flair.output.modal(str);
+                        Array.from(document.getElementsByClassName('tiebreaker')).forEach(function (el) {
+                            el.addEventListener('click', flair.resolve.tie);
+                        });
+                    } else {
+                        alert('There weren\'t ties, but we have it marked as tied');
+                    }
+                    fdata.stream.ties.shift();
+                } else {
+                    flair.output.title('Ties resolved');
+                    fdata.times.tieEnd = new Date();
+                    flair.output.prepareData();
 
-      for (key in fdata.requests) {
-        if (fdata.requests.hasOwnProperty(key)) {
-          fdata.stats.requests++;
-          request = fdata.requests[key];
+                    if (confirm('Would you like to set flairs?')) {
+                        flair.set.flairs();
+                    } else {
+                        flair.output.summary();
+                    }
+                }
+            },
+            tie: function(event) {
+                var el = event.currentTarget;
+                var request = el.getAttribute('data-parent');
+                var index = el.getAttribute('data-index');
+                var reply = fdata.requests[request].replies[index];
 
-          if (!fdata.outputPrep[request.author]) {
-            fdata.outputPrep[request.author] = {
-              attempts: 0,
-              wins: 0,
-              request_link: [],
-              attempt_link: [],
-              win_link: [],
-              attributes: []
-            };
-          }
+                flair.set.winner(reply);
 
-          fdata.outputPrep[request.author].author = request.author;
-          fdata.outputPrep[request.author].replies = request.children.length;
-          fdata.outputPrep[request.author].class = request.class;
-          fdata.outputPrep[request.author].attributes = request.attributes;
-          if (!!request.tieBroken) {
-            fdata.outputPrep[request.author].attributes.push(fdata.mapper.tied);
-          }
+                flair.helpers.getUser(reply.name).tieWins++;
+                var parentUser = flair.helpers.getUser(reply.parentName);
+                if (! parentUser.attributes.includes(fdata.mapper.tied)) {
+                    flair.helpers.getUser(reply.parentName).attributes.push(fdata.mapper.tied);
+                }
 
-          if (fdata.outputPrep[request.author].request_link.indexOf(request.id) === -1) {
-            fdata.outputPrep[request.author].request_link.push(request.id);
-          }
-
-          for (i = 0; i < request.children.length; i++) {
-            item = request.children[i];
-            fdata.stats.attempts++;
-            fdata.stats.attemptscore += item.score;
-
-            if (!fdata.outputPrep[item.author]) {
-              fdata.outputPrep[item.author] = {
-                attempts: 0,
-                wins: 0,
-                request_link: [],
-                attempt_link: [],
-                win_link: []
-              };
+                flair.resolve.ties();
             }
+        },
+        output: {
+            title: function (str) {
+                document.title = str;
+                flair.output.modal(str);
+            },
+            modal: function (str) {
+                var output;
+                if (!document.getElementById('flair-output')) {
+                    output = document.createElement('div');
+                    output.setAttribute('id', 'flair-output');
+                    output.innerHTML = '<div>' + str + '</div>';
+                    document.body.appendChild(output);
+                } else {
+                    output = document.getElementById('flair-output');
+                    output.innerHTML = '<div>' + str + '</div>';
+                }
+            },
+            summary: function () {
+                var postBody = '#In this month\'s flair thread: \n\n';
+                postBody += flair.output.main();
+                postBody += '\n\n---\n\n';
+                postBody += flair.output.stats();
+                postBody += '\n\n---\n\n[Here\'s a link to the flair thread](/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + ')\n';
 
-            fdata.outputPrep[item.author].attempts++;
-            fdata.outputPrep[item.author].author = item.author;
+                var commentBody = 'Here\'s how much bias I had to specific users this month when resolving ties:\n\n';
+                commentBody += flair.output.tieStats();
 
-            if (fdata.outputPrep[item.author].attempt_link.indexOf(item.id) === -1) {
-              fdata.outputPrep[item.author].attempt_link.push(item.id);
+                var output = '<textarea>' + postBody + '</textarea>';
+                output += '<textarea>' + commentBody + '</textarea>';
+
+                flair.output.title('Done');
+                flair.output.modal(output);
+            },
+            prepareData: function () {
+                Object.keys(fdata.requests).forEach(function(key) {
+                    var request = fdata.requests[key];
+                    flair.helpers.getUser(request.name).ids.push(request.id);
+                    request.replies.forEach(function(reply) {
+                        var user = flair.helpers.getUser(reply.name);
+                        user.attempts.push(reply);
+                        if (reply.winner) {
+                            user.wins.push(reply);
+                        }
+                    });
+                });
+
+                fdata.stream.userArr = Object.keys(fdata.stream.users).map(function (username) {
+                    var user = flair.helpers.getUser(username);
+                    user.name = username;
+                    user.score = user.wins.length * (user.wins.length / Math.max(1, user.attempts.length));
+                    return user;
+                })
+                .sort(flair.helpers.sort.name)
+                .sort(flair.helpers.sort.attempts)
+                .sort(flair.helpers.sort.weight);
+
+                fdata.times.fullEnd = new Date();
+            },
+            main: function() {
+                var table = [
+                    ['User','Wins','Tries','Score','Win Permalinks'],
+                    [':--','--:','--:','--:',':--']
+                ].concat(fdata.stream.userArr.filter(function (user) {
+                        return !!user.attempts.length;
+                    }).map(function (user) {
+                        return [
+                            flair.helpers.getLink(true, user),
+                            user.wins.length,
+                            user.attempts.length,
+                            user.score.toFixed(2),
+                            user.wins.sort(flair.helpers.sort.name)
+                            .map(flair.helpers.getLink.bind(null, false)).join(', ')
+                        ];
+                    })
+                );
+                var mainTable = flair.helpers.table(table) +
+                    '\n\n^(*Table sorted by weighted score desc, number of attempts asc, username asc*)\n\n';
+
+                var moochers = '###Moochers\n\nThe users who requested flair, but didn\'t suggest any for anyone else.\n\n' +
+                    fdata.stream.userArr.filter(function (user) {
+                        return !user.attempts.length;
+                    }).map(flair.helpers.getLink.bind(null, true))
+                    .join(', ') +
+                    '\n\n';
+
+                var footnotes = '###Definitions\n\n' +
+                    fdata.mapper.tied + ' had a tie that was resolved    \n' +
+                    (fdata.stats.newUsers ? fdata.mapper.new + ' new user    \n' : '') +
+                    (fdata.stats.disabledUsers ? fdata.mapper.disabled + ' users with flair disabled    \n' : '') +
+                    '"Wins" are replies to flair requests that are highest voted at the thread close    \n' +
+                    '"Tries" any reply to the flair requests    \n' +
+                    '"Score" is the weighted score of `wins * (wins / tries)`\n\n';
+
+                return mainTable + moochers + footnotes;
+            },
+            stats: function () {
+                var stats = [['\\#', 'Units', 'Summary'], ['--:', ':--', ':--']];
+                stats.push(flair.helpers.getDiff(fdata.times.fullStart, fdata.times.fullEnd).concat(['Time to do everything']));
+                stats.push(flair.helpers.getDiff(fdata.times.loadStart, fdata.times.loadEnd).concat(['Loaded all data']));
+                stats.push([fdata.stats.moreLinksClicked, '', '"More" links loaded']);
+                if (fdata.stats.moreLinksClicked) { stats.push(flair.helpers.getDiff(fdata.times.moreStart, fdata.times.moreEnd, fdata.stats.moreLinksClicked).concat(['Average "more" link load time'])); }
+                stats.push([fdata.stats.requests, '', 'Flair requests']);
+                stats.push([fdata.stats.attempts, '', 'Flair attempts']);
+                stats.push([(fdata.stats.attempts / fdata.stats.requests).toFixed(2), '', 'Attempts per flair request']);
+                stats.push([(fdata.stats.winscore / fdata.stats.requests).toFixed(2), '', 'Karma average per winning flair']);
+                stats.push([(fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2), '', 'Karma average per attempt']);
+                if (fdata.stats.ties) {
+                    stats.push([fdata.stats.ties, '', 'Requests ended in ties']);
+                    stats.push([((fdata.stats.ties / fdata.stats.requests)*100).toFixed(1) + '%', '', 'Requests ended in ties']);
+                    stats.push(flair.helpers.getDiff(fdata.times.tieStart, fdata.times.tieEnd).concat(['Time to resolve ties']));
+                    stats.push(flair.helpers.getDiff(fdata.times.tieStart, fdata.times.tieEnd, fdata.stats.ties).concat(['Average time to resolve a single tie']));
+                }
+                if (fdata.times.applyStart && fdata.times.applyEnd) {
+                    stats.push(flair.helpers.getDiff(fdata.times.applyStart, fdata.times.applyEnd).concat(['Time to set new flairs']));
+                    stats.push(flair.helpers.getDiff(fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests).concat(['Average time to set a single flair']));
+                }
+                if (fdata.stats.newUsers) { stats.push([fdata.stats.newUsers, '', 'Users requested flair for the first time']); }
+                if (fdata.stats.disabledUsers) { stats.push([fdata.stats.disabledUsers, '', 'Users had their flair disabled when flair was applied']); }
+
+                return '#Some stats:\n\n' + flair.helpers.table(stats) + '\n\n';
+            },
+            tieStats: function () {
+                var tieStats = [
+                    ['User', 'Win %', 'Wins', 'Ties', 'Weighted Score'],
+                    [':--', '--:', '--:', '--:', '--:']
+                ];
+                tieStats = tieStats.concat(fdata.stream.userArr.filter(function (user) {
+                    user.tiePercent = user.ties && (user.tieWins / user.ties);
+                    user.tieScore = user.ties && user.tieWins * (user.tieWins / user.ties);
+                    return !!user.ties;
+                })
+                .sort(flair.helpers.sort.name)
+                .sort(function (a, b) {
+                    return a.ties > b.ties ? 1 : (a.ties < b.ties ? -1 : 0);
+                })
+                .sort(function(a, b) {
+                    return a.tieScore > b.tieScore ? -1 : (a.tieScore < b.tieScore ? 1 : 0);
+                }).map(function(user) {
+                    return [flair.helpers.escape(user.name), (user.tiePercent * 100).toFixed(1) + '%', user.tieWins, user.ties, user.tieScore.toFixed(2)];
+                }));
+
+                return flair.helpers.table(tieStats);
             }
+        },
+        helpers: {
+            decode: function (str) {
+                var txt = document.createElement("textarea");
+                txt.innerHTML = str;
+                return txt.value.trim();
+            },
+            escape: function (username) {
+                return (username || '').replace(/_/g,'\\_');
+            },
+            sort: {
+                name: function (a, b) {
+                    var aName = a.parentName || a.name;
+                    var bName = b.parentName || b.name;
+                    return aName.toLowerCase() > bName.toLowerCase() ? 1 : (aName.toLowerCase() < bName.toLowerCase() ? -1 : 0);
+                },
+                attempts: function (a, b) {
+                    return a.attempts.length > b.attempts.length ? 1 : (a.attempts.length < b.attempts.length ? -1 : 0);
+                },
+                weight: function (a, b) {
+                    return a.score > b.score ? -1 : (a.score < b.score ? 1 : 0);
+                }
+            },
+            getUser: function (username) {
+                fdata.stream.users[username] = fdata.stream.users[username] || flair.helpers.blankUser();
+                return fdata.stream.users[username];
+            },
+            blankUser: function() {
+                return {
+                    ties: 0,
+                    tieWins: 0,
+                    ids: [],
+                    flairs: [],
+                    attributes: [],
+                    wins: [],
+                    attempts: []
+                };
+            },
+            table: function (data) {
+                return data.map(function(row) {
+                    return row.join('|');
+                }).join('\n');
+            },
+            getLink: function (isRequest, comment) {
+                var name = isRequest ? comment.name : comment.parentName;
+                var len = comment.ids && comment.ids.length || 0;
+                var str;
+                if (len === 1) {
+                    var id = comment.ids[0] + (!isRequest ? '?context=1' : '');
+                    str = '[' + flair.helpers.escape(name) + '](/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + id + ')';
+                    str += flair.helpers.getAttributes(name);
+                } else {
+                    str = flair.helpers.escape(name) + flair.helpers.getAttributes(name);
+                    if (len) {
+                        comment.ids.forEach(function(id, index) {
+                            id += !isRequest ? '?context=1' : '';
+                            str += ' [[' + index + ']](/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + id + ')';
+                        });
+                    }
+                }
+                return str.trim();
+            },
+            getAttributes: function(name) {
+                var user = flair.helpers.getUser(name);
+                return ' ' + (user && user.attributes ? user.attributes.join('') : '');
+            },
+            getDiff: function(startTime, endTime, averageCount) {
+                var diff = endTime.getTime() - startTime.getTime();
+                if (averageCount) {
+                    diff = diff / averageCount;
+                }
 
-            if (item.winner) {
-              fdata.outputPrep[item.author].wins++;
-              fdata.stats.winscore += item.score;
-
-              fdata.outputPrep[request.author].flair_text = item.text;
-              fdata.outputPrep[request.author].flair_link = item.id;
-              if (fdata.outputPrep[item.author].win_link.indexOf(request.author + ',' + item.id) === -1) {
-                fdata.outputPrep[item.author].win_link.push(request.author + ',' + item.id);
-              }
+                if (diff/1000 < 60) { /* Less than a minute */
+                    return [(diff/1000).toFixed(2),'seconds'];
+                }
+                diff = Math.round(diff / 1000);
+                return [Math.floor(diff / 60) + ':' + ('0' + (diff % 60)).slice(-2), 'minutes'];
             }
-          }
         }
-      }
+    };
 
-      for (key in fdata.outputPrep) {
-        item = fdata.outputPrep[key];
-        item.weighted = item.attempts > 0 ? item.wins * (item.wins / item.attempts) : 0;
-        item.moocher = item.attempts == 0;
-        fdata.output.push(item);
-      }
-
-      fdata.output = fdata.output.sort(function (a, b) {
-        return (a.weighted > b.weighted ? -1 :
-          (a.weighted < b.weighted ? 1 :
-            (a.moocher > b.moocher ? 1 :
-              (a.moocher < b.moocher ? -1 :
-                (a.attempts > b.attempts ? 1 :
-                  (a.attempts < b.attempts ? -1 :
-                    (a.author.toLowerCase() > b.author.toLowerCase() ? 1 :
-                      (a.author.toLowerCase() < b.author.toLowerCase() ? -1 : 0))))))));
-      });
-
-      if (confirm('Would you like to set flairs?')) {
-        fdata.flairsetter = fdata.output.slice();
-        fdata.times.applyStart = new Date();
-        flair.setFlairs();
-      } else {
-        flair.outputer();
-      }
-    },
-    outputer: function () {
-      var baseUrl = '/r/CenturyClub/comments/' + flair.thread_id;
-      function requestHandler(item) {
-        var requestStr = '';
-        item.attributes = item.attributes && item.attributes.filter(flair.unique) || [];
-        if (item.request_link.length == 1) {
-          requestStr += '[' + flair.sanitize(item.author) + '](' + baseUrl + '/_/' + item.request_link[0] + ')';
-        } else if (item.request_link.length > 1) {
-          requestStr += flair.sanitize(item.author) + ' ';
-          for (ii = 0; ii < item.request_link.length; ii++) {
-            requestStr += '[[' + (ii + 1) + ']](' + baseUrl + '/_/' + item.request_link[ii] + ')';
-          }
-        } else {
-          requestStr += flair.sanitize(item.author);
-        }
-        return requestStr + (item.attributes.length ? ' ' + item.attributes.join('') : '');
-      }
-
-      function outputMainInformation() {
-        var i, ii,
-          definitionstr = '',
-          moocherstr = '###Moochers\n\nThe users who requested flair, but didn\'t suggest any for anyone else.\n\n',
-          tablestr = 'User|Wins|Tries|Score|Win Permalinks\n';
-        tablestr += ':--|--:|--:|--:|:--\n';
-        for (i = 0; i < fdata.output.length; i++)  {
-          item = fdata.output[i];
-          if (item.attempts) {
-            tablestr += requestHandler(item) + '|';
-
-            tablestr += (item.attempts > 0 ? item.wins : '-') + '|';
-            tablestr += (item.attempts > 0 ? item.attempts : '-') + '|';
-            tablestr += (item.attempts > 0 ? item.weighted.toFixed(2) : '-') + '|';
-
-            item.win_link = flair.sort(item.win_link);
-            for (ii = 0; ii < item.win_link.length; ii++) {
-              tablestr += '[' + flair.sanitize(item.win_link[ii].split(',')[0]) + '](' + baseUrl + '/_/' + item.win_link[ii].split(',')[1] + '?context=1)' + (ii + 1 < item.win_link.length ? ', ' : '');
-            }
-            tablestr += '\n';
-          } else {
-            moocherstr += requestHandler(item) + ', ';
-          }
-        }
-
-        tablestr += '^(*Table sorted by weighted score desc, number of attempts asc, username asc*)\n\n';
-
-
-        definitionstr += '\n |Definitions\n--:|:--\n';
-        definitionstr += fdata.stats.ties > 0 ? fdata.mapper.tied.replace(/\\/g,'') + '|had a tie that was resolved\n' : '';
-        definitionstr += fdata.stats.newUsers > 0 ? fdata.mapper.new + '|new users\n' : '';
-        definitionstr += fdata.stats.disabledUsers > 0 ? fdata.mapper.disabled + '|users with flair disabled\n' : '';
-        definitionstr += 'Wins|replies to flair requests that are highest voted at the thread close.\n';
-        definitionstr += 'Tries|any reply to the flair requests.\n';
-        definitionstr += 'Score|weighted score of `wins * ( wins / tries)`\n\n';
-        return tablestr + '\n' + moocherstr.slice(0, -2) + '\n\n' + definitionstr;
-      }
-
-      function outputStats() {
-        var statsStr = '#Some stats:\n\n';
-        statsStr += '\\#|Units|Summary\n--:|:--|:--\n';
-        statsStr += fdata.stats.morelinksclicked + '|-|"More" links clicked\n';
-        statsStr += flair.diff(fdata.times.moreStart, fdata.times.moreEnd) + '|Minutes|Loaded all comments\n';
-        statsStr += flair.diff(fdata.times.moreStart, fdata.times.moreEnd, fdata.stats.morelinksclicked + 1) + '|Seconds|Average "more" link load time\n';
-        statsStr += fdata.stats.requests + '|-|Flair requests\n';
-        statsStr += (fdata.stats.attempts / fdata.stats.requests).toFixed(2) + '|-|Attempts per flair request\n';
-        statsStr += fdata.stats.ties > 0 ? fdata.stats.ties + '|-|Requests ended in ties\n' : '';
-        statsStr += fdata.stats.ties > 0 ? (100 * (fdata.stats.ties / fdata.stats.requests)).toFixed(1) + '%|-|Requests ended in ties\n' : '';
-        statsStr += flair.diff(fdata.times.tieStart, fdata.times.tieEnd) + '|Minutes|Time to resolve ties\n';
-        statsStr += flair.diff(fdata.times.tieStart, fdata.times.tieEnd, fdata.stats.ties) + '|Seconds|Average time to resolve a single tie\n';
-        statsStr += fdata.stats.attempts + '|-|Flair attempts\n';
-        statsStr += (fdata.stats.winscore / fdata.stats.requests).toFixed(2) + '|Upvotes|Karma average per winning flair\n';
-        statsStr += (fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2) + '|Upvotes|Karma average per attempt\n';
-        if (fdata.times.applyStart) {
-          statsStr += (flair.diff(fdata.times.applyStart, fdata.times.applyEnd) || '-') + '|Minutes|Time to set new flairs\n';
-          statsStr += (flair.diff(fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests) || '-') + '|Seconds|Average time to set a single flair\n\n';
-        }
-        statsStr += fdata.stats.newUsers > 0 ? fdata.stats.newUsers + '|-|users requested flair for the first time\n' : '';
-        statsStr += fdata.stats.disabledUsers > 0 ? fdata.stats.disabledUsers + '|-|users had their flair disabled when flair was applied\n' : '';
-        return statsStr;
-      }
-
-      function getRuleBreakers() {
-        var ruleBreakerStr = 'These people just couldn\'t seem to read simple instructions: ';
-        for (i = 0; i < fdata.cantFollowInstructions.length; i++) {
-          var item = fdata.cantFollowInstructions[i];
-          ruleBreakerStr += '[' + item.author + '](' + baseUrl + '/_/' + item.id + '?context=1), ';
-        }
-        return ruleBreakerStr;
-      }
-
-      var str = '#In this month\'s flair thread: \n\n';
-      str += outputMainInformation();
-      str += '\n\n---\n\n';
-      str += outputStats();
-      str += '\n\n---\n\n[Here\'s a link to the flair thread](' + baseUrl + ')\n';
-      str = '<textarea>' + str + '</textarea>';
-
-
-      var commentStr = '<textarea>' + getRuleBreakers() + '</textarea>';
-
-      flair.title('Done');
-      flair.output(str + commentStr);
-    },
-    setFlairs: function () {
-      if (fdata.flairsetter.length && fdata.outputPrep[fdata.flairsetter[0].author].flair_text) {
-        /*Research # POST [/r/subreddit]/api/flaircsv*/
-
-        flair.title('Setting flair for ' + fdata.flairsetter[0].author);
-
-        var data = {
-          name: fdata.flairsetter[0].author,
-          text: fdata.outputPrep[fdata.flairsetter[0].author].flair_text,
-          css_class: fdata.flairsetter[0].author == fdata.output[0].author ? 'monthlywinner' : '',
-          id: '#flair-xxxxx',
-          r: r.config.cur_listing,
-          uh: fdata.modhash,
-          renderstyle: 'json'
-        };
-
-        var form_data = new FormData();
-
-        for (var key in data) {
-          form_data.append(key, data[key]);
-        }
-
-        fetch('/api/flair', {
-          credentials: 'include',
-          headers: {
-            'cookie': document.cookie
-          },
-          body: form_data,
-          method: 'POST',
-          referrer: document.location.protocol + '//' + document.location.host
-        }).then(function (response) {
-          return response.json();
-        }).then(function (data) {
-          fdata.flairsetter.shift();
-          flair.setFlairs();
-        });
-      } else if (fdata.flairsetter.length) {
-        fdata.flairsetter.shift();
-        flair.setFlairs();
-      } else {
-        fdata.times.applyEnd = new Date();
-        flair.outputer();
-      }
-    },
-    sort: function(arr) {
-      return arr.sort(function (a,b) {
-        return (a.toLowerCase() > b.toLowerCase() ? 1 : (a.toLowerCase() < b.toLowerCase() ? -1 : 0));
-      });
-    },
-    decode: function (str) {
-      var txt = document.createElement("textarea");
-      txt.innerHTML = str;
-      return txt.value.trim();
-    },
-    sanitize: function (str) {
-      return str.replace(/_/g, '\\_');
-    },
-    diff: function (start, end, qty) {
-      var diff = Math.round((end.getTime() - start.getTime()) / 1000);
-      if (diff == 0) {
-        return '';
-      }
-
-      var minutes = Math.floor(diff / 60),
-        seconds = diff - (minutes * 60);
-
-      if (qty) {
-        return (diff / qty).toFixed(2);
-      }
-      return minutes + ':' + ('0' + seconds).slice(-2);
-    },
-    unique: function(value, index, self) {
-      return self.indexOf(value) === index;
-    }
-  };
-
-  flair.init();
+    flair.setup.init();
 })();
