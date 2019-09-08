@@ -241,9 +241,8 @@ javascript: (function () {
                 };
                 if (comment.replies) {
                     comment.replies.data.children.forEach(flair.parse.comment);
-                } else {
-                    debugger;
-                    alert('This request had no replies');
+                } else if (confirm(comment.author + ' has a request with no replies')) {
+                    window.open('http://reddit.com/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + comment.id);
                 }
             },
             reply: function (comment) {
@@ -279,17 +278,18 @@ javascript: (function () {
                 var highScoreReplies = replies.filter(function(reply) {
                     return reply.score === highScore;
                 });
-                highScoreReplies.forEach(function (reply) {
-                    flair.helpers.getUser(reply.name).ties++;
-                });
 
                 if (highScoreReplies.length > 1) {
                     /* Return the ties to be resolved */
                     return highScoreReplies;
                 }
 
+                highScoreReplies.forEach(function (reply) {
+                    flair.helpers.getUser(reply.name).ties++;
+                });
+
                 /* There was no tie, so mark it a winner */
-                var winner = highScoreReplies[0];
+                flair.set.winner(highScoreReplies[0]);
                 return [];
             }
         },
