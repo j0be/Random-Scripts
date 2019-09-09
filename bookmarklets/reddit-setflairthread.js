@@ -95,7 +95,7 @@ javascript: (function () {
                 var params = {
                         name: username,
                         r: r.config.cur_listing,
-                        uh: fdata.modhash
+                        uh: fdata.stream.modhash
                     };
                 var paramStr = Object.keys(params).map(function (k) { return esc(k) + '=' + esc(params[k]); }).join('&');
 
@@ -112,7 +112,7 @@ javascript: (function () {
         },
         set: {
             flairs: function() {
-                /*Research # POST [/r/subreddit]/api/flaircsv*/
+                /* Research # POST [/r/subreddit]/api/flaircsv */
                 fdata.times.applyStart = new Date();
 
                 /* Prepare the flair array */
