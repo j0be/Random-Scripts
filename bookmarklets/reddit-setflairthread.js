@@ -1,4 +1,4 @@
-javascript: (function () {
+// javascript: (function () {
     /* Keep track of some flair data */
     window.fdata = {
         requests: {},
@@ -280,13 +280,13 @@ javascript: (function () {
                 });
 
                 if (highScoreReplies.length > 1) {
+                    highScoreReplies.forEach(function (reply) {
+                        flair.helpers.getUser(reply.name).ties++;
+                    });
+
                     /* Return the ties to be resolved */
                     return highScoreReplies;
                 }
-
-                highScoreReplies.forEach(function (reply) {
-                    flair.helpers.getUser(reply.name).ties++;
-                });
 
                 /* There was no tie, so mark it a winner */
                 flair.set.winner(highScoreReplies[0]);
@@ -346,11 +346,11 @@ javascript: (function () {
                 var reply = fdata.requests[request].replies[index];
 
                 flair.set.winner(reply);
-
                 flair.helpers.getUser(reply.name).tieWins++;
+
                 var parentUser = flair.helpers.getUser(reply.parentName);
                 if (! parentUser.attributes.includes(fdata.mapper.tied)) {
-                    flair.helpers.getUser(reply.parentName).attributes.push(fdata.mapper.tied);
+                    parentUser.attributes.push(fdata.mapper.tied);
                 }
 
                 flair.resolve.ties();
@@ -581,4 +581,4 @@ javascript: (function () {
     };
 
     flair.setup.init();
-})();
+// })();
