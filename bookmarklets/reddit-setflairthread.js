@@ -1,4 +1,4 @@
-// javascript: (function () {
+javascript: (function () {
     /* Keep track of some flair data */
     window.fdata = {
         requests: {},
@@ -581,4 +581,4 @@
     };
 
     flair.setup.init();
-// })();
+})();
