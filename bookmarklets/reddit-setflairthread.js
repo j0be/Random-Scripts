@@ -374,6 +374,8 @@ javascript: (function () {
                 }
             },
             summary: function () {
+                fdata.times.fullEnd = new Date();
+
                 var postBody = '#In this month\'s flair thread: \n\n';
                 postBody += flair.output.main();
                 postBody += '\n\n---\n\n';
@@ -411,8 +413,6 @@ javascript: (function () {
                 .sort(flair.helpers.sort.name)
                 .sort(flair.helpers.sort.attempts)
                 .sort(flair.helpers.sort.weight);
-
-                fdata.times.fullEnd = new Date();
             },
             main: function() {
                 var table = [
