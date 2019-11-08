@@ -289,7 +289,7 @@ javascript: (function () {
                 }
 
                 /* There was no tie, so mark it a winner */
-                flair.set.winner(highScoreReplies[0]);
+                highScoreReplies[0] && flair.set.winner(highScoreReplies[0]);
                 return [];
             }
         },
