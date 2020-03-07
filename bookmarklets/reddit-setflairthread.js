@@ -1,4 +1,4 @@
-javascript: (function () {
+// javascript: (function () {
     /* Keep track of some flair data */
     window.fdata = {
         requests: {},
@@ -6,7 +6,9 @@ javascript: (function () {
             threadId: document.location.href.split('/')[6],
             users: {},
             moreLinks: [],
-            flairChecks: []
+            flairChecks: [],
+            commentIds: [],
+            noReplies: []
         },
         stats: {
             requests: 0,
@@ -172,8 +174,8 @@ javascript: (function () {
         },
         parse: {
             comments: function (data) {
-                if (data) {
-                    data.children.forEach(function (comment) {
+                if (data && data.children) {
+                    data.children.forEach(function(comment) {
                         flair.parse.comment(comment);
                     });
                 }
@@ -188,6 +190,8 @@ javascript: (function () {
                         fdata.times.moreEnd = fdata.times.moreEnd || new Date();
                         flair.get.blankFlair(fdata.stream.flairChecks[0]);
                     }
+                } else if (fdata.stream.noReplies.length) {
+                    alert('Killing process so that we can process requests with no replies. (Restart the script once you\'ve replied)');
                 } else {
                     flair.output.title('Loaded all comments and user info');
                     fdata.times.moreEnd = fdata.times.moreEnd || new Date();
@@ -196,14 +200,19 @@ javascript: (function () {
                 }
             },
             comment: function (comment) {
+                var isRequest = comment.data.parent_id.slice(0, 2) === 't3';
                 if (comment.kind === 'more') {
-                    fdata.stream.moreLinks.push(comment.data.id);
+                    var ids = isRequest ?
+                        comment.data.children :
+                        [comment.data.parent_id.slice(3)];
+                    fdata.stream.moreLinks = fdata.stream.moreLinks.concat(ids);
                 } else {
-                    var isRequest = comment.data.parent_id === 't3_' + fdata.stream.threadId;
                     flair.parse.checkFlair(comment.data);
+
                     if (isRequest) {
                         flair.parse.request(comment.data);
-                    } else {
+                    } else if (!fdata.stream.commentIds.includes(comment.data.id)) {
+                        fdata.stream.commentIds.push(comment.data.id);
                         flair.parse.reply(comment.data);
                     }
                 }
@@ -233,16 +242,21 @@ javascript: (function () {
                 flair.parse.comments(data[1].data);
             },
             request: function (comment) {
-                fdata.stats.requests ++;
-                fdata.requests[comment.name] = {
-                    id: comment.id,
-                    name: comment.author,
-                    replies: []
-                };
+                if (!fdata.stream.commentIds.includes(comment.id)) {
+                    fdata.stream.commentIds.push(comment.id);
+                    fdata.stats.requests ++;
+                    fdata.requests[comment.name] = {
+                        id: comment.id,
+                        name: comment.author,
+                        replies: []
+                    };
+                }
+
                 if (comment.replies) {
                     comment.replies.data.children.forEach(flair.parse.comment);
-                } else if (confirm(comment.author + ' has a request with no replies')) {
-                    window.open('http://reddit.com/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + comment.id);
+                } else if (!fdata.stream.noReplies.includes(comment.id) && confirm(comment.author + ' has a request with no replies')) {
+                    fdata.stream.noReplies.push(comment.id);
+                    window.open('http://reddit.com/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + comment.id + '?context=3');
                 }
             },
             reply: function (comment) {
@@ -581,4 +595,4 @@ javascript: (function () {
     };
 
     flair.setup.init();
-})();
+// })();
