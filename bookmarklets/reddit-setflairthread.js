@@ -409,8 +409,8 @@ javascript: (function () {
                 var commentBody = 'Here\'s how much bias I had to specific users this month when resolving ties:\n\n';
                 commentBody += flair.output.tieStats();
 
-                var output = '<textarea>' + postBody + '</textarea>';
-                output += '<textarea>' + commentBody + '</textarea>';
+                var output = '<textarea id="postBody" style="white-space: nowrap; height: 50vh; width: 15vw;">' + postBody + '</textarea>';
+                output += '<textarea id="commentBody" style="white-space: nowrap; height: 50vh; width: 15vw;">' + commentBody + '</textarea>';
 
                 flair.output.title('Done');
                 flair.output.modal(output);
@@ -465,13 +465,13 @@ javascript: (function () {
                     .join(', ') +
                     '\n\n';
 
-                var footnotes = '###Definitions\n\n' +
-                    fdata.mapper.tied + ' had a tie that was resolved    \n' +
-                    (fdata.stats.newUsers ? fdata.mapper.new + ' new user    \n' : '') +
-                    (fdata.stats.disabledUsers ? fdata.mapper.disabled + ' users with flair disabled    \n' : '') +
-                    '"Wins" are replies to flair requests that are highest voted at the thread close    \n' +
-                    '"Tries" any reply to the flair requests    \n' +
-                    '"Score" is the weighted score of `wins * (wins / tries)`\n\n';
+                var footnotes = '**Definitions**\n\n' +
+                    '^(* had a tie that was resolved)    \n' +
+                    (fdata.stats.newUsers ? '^(' + fdata.mapper.new + ' new user)    \n' : '') +
+                    (fdata.stats.disabledUsers ? '^(' + fdata.mapper.disabled + ' users with flair disabled)    \n' : '') +
+                    '^("Wins" are replies to flair requests that are highest voted at the thread close)    \n' +
+                    '^("Tries" any reply to the flair requests)    \n' +
+                    '^("Score" is the weighted score of `wins * wins / tries)`\n\n';
 
                 return mainTable + moochers + footnotes;
             },
