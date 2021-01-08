@@ -278,7 +278,7 @@ javascript: (function () {
                 }
             },
             flairText: function(comment) {
-                var flairText = flair.helpers.decode(flair.helpers.decode(comment.body_html).replace(/<.*?>/gm, '')).replace(/[\n\r]/g, '') || comment.body;
+                var flairText = flair.helpers.decode(flair.helpers.decode(comment.body_html.trim()).replace(/<.*?>/gm, '')).replace(/[\n\r]/g, '') || comment.body.trim();
                 flairText = flairText.match(/\[.{0,62}\]/m) ? flairText.match(/\[.{0,62}\]/m)[0] : flairText;
                 if (flairText.length <= 62 && !flairText.match(/^\[/)) { flairText = '[' + flairText; } /*Leading bracket*/
                 if (flairText.length <= 63 && !flairText.match(/\]$/)) { flairText += ']'; } /*Trailing bracket*/
@@ -292,7 +292,7 @@ javascript: (function () {
                     })
                     .filter(function(reply) {
                         /* Length check. */
-                        return (reply.text || '').trim().length <= 64;
+                        return reply.text.length <= 64;
                     });
 
                 var highScore = Math.max.apply(null, validReplies.map(function(reply) {
