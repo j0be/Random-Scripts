@@ -267,7 +267,8 @@ javascript: (function () {
                             name: comment.author,
                             parentName: fdata.requests[comment.parent_id].name,
                             score: comment.score,
-                            text: flair.parse.flairText(comment)
+                            text: flair.parse.flairText(comment),
+                            removed: comment.removed || comment.spam
                         });
                         fdata.stats.attempts ++;
                         fdata.stats.attemptscore += comment.score;
@@ -285,11 +286,20 @@ javascript: (function () {
                 return flairText;
             },
             tiedReplies: function(replies) {
-                var highScore = Math.max.apply(null, replies.map(function(reply) {
+                let validReplies = replies.filter(function(reply) {
+                        /* No mod removals */
+                        return !reply.removed;
+                    })
+                    .filter(function(reply) {
+                        /* Length check. */
+                        return (reply.text || '').trim().length <= 64;
+                    });
+
+                var highScore = Math.max.apply(null, validReplies.map(function(reply) {
                     return reply.score;
                 }));
 
-                var highScoreReplies = replies.filter(function(reply) {
+                var highScoreReplies = validReplies.filter(function(reply) {
                     return reply.score === highScore;
                 });
 
