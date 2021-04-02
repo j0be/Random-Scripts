@@ -261,7 +261,7 @@ javascript: (function () {
                 }
             },
             reply: function (comment) {
-                if (flair.helpers.isValidRequest(comment)) {
+                if (!flair.helpers.isRemoved(comment)) {
                     if (fdata.requests[comment.parent_id]) {
                         fdata.requests[comment.parent_id].replies.push({
                             ids: [comment.id],
@@ -288,7 +288,7 @@ javascript: (function () {
                 return flairText;
             },
             tiedReplies: function(replies) {
-                let validReplies = replies.filter(flair.helpers.isValidRequest);
+                let validReplies = replies.filter(flair.helpers.isValidReply);
 
                 var highScore = Math.max.apply(null, validReplies.map(function(reply) {
                     return reply.score;
@@ -596,7 +596,7 @@ javascript: (function () {
                 diff = Math.round(diff / 1000);
                 return [Math.floor(diff / 60) + ':' + ('0' + (diff % 60)).slice(-2), 'minutes'];
             },
-            isValidRequest: function(comment) {
+            isValidReply: function(comment) {
                 let text = comment.text || comment.body;
                 return !flair.helpers.isRemoved(comment) && text.length <= 64;
             },
