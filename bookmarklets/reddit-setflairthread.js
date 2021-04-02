@@ -255,7 +255,7 @@ javascript: (function () {
 
                 if (comment.replies) {
                     comment.replies.data.children.forEach(flair.parse.comment);
-                } else if (flair.helpers.isValidRequest(comment) && !fdata.stream.noReplies.includes(comment.id) && confirm(comment.author + ' has a request with no replies')) {
+                } else if (!flair.helpers.isRemoved(comment) && !fdata.stream.noReplies.includes(comment.id) && confirm(comment.author + ' has a request with no replies')) {
                     fdata.stream.noReplies.push(comment.id);
                     window.open('http://reddit.com/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + comment.id + '?context=3');
                 }
@@ -270,7 +270,7 @@ javascript: (function () {
                             score: comment.score,
                             text: flair.parse.flairText(comment),
                             likes: comment.likes,
-                            removed: comment.removed || comment.spam || comment.banned_by
+                            removed: flair.helpers.isRemoved(comment)
                         });
                         fdata.stats.attempts ++;
                         fdata.stats.attemptscore += comment.score;
@@ -596,9 +596,12 @@ javascript: (function () {
                 diff = Math.round(diff / 1000);
                 return [Math.floor(diff / 60) + ':' + ('0' + (diff % 60)).slice(-2), 'minutes'];
             },
-            isValidRequest: function(request) {
-                let text = request.text || request.body;
-                return !request.removed && !request.spam && !request.banned_by && text.length <= 64;
+            isValidRequest: function(comment) {
+                let text = comment.text || comment.body;
+                return !flair.helpers.isRemoved(comment) && text.length <= 64;
+            },
+            isRemoved: function(comment) {
+                return comment.removed || comment.spam || comment.banned_by;
             }
         }
     };
