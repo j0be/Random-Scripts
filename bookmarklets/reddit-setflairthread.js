@@ -261,7 +261,7 @@ javascript: (function () {
                 }
             },
             reply: function (comment) {
-                if (!flair.helpers.isRemoved(comment)) {
+                if (!flair.helpers.isValidReply(comment)) {
                     if (fdata.requests[comment.parent_id]) {
                         fdata.requests[comment.parent_id].replies.push({
                             ids: [comment.id],
