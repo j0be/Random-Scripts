@@ -285,7 +285,7 @@ javascript: (function () {
                 if (flairText.length <= 62 && !flairText.match(/^\[/)) { flairText = '[' + flairText; } /*Leading bracket*/
                 if (flairText.length <= 63 && !flairText.match(/\]$/)) { flairText += ']'; } /*Trailing bracket*/
 
-                return flairText;
+                return flairText.trim();
             },
             tiedReplies: function(replies) {
                 let validReplies = replies.filter(flair.helpers.isValidReply);
@@ -597,7 +597,7 @@ javascript: (function () {
                 return [Math.floor(diff / 60) + ':' + ('0' + (diff % 60)).slice(-2), 'minutes'];
             },
             isValidReply: function(comment) {
-                let text = comment.text || comment.body;
+                let text = flair.parse.flairText(comment);
                 return !flair.helpers.isRemoved(comment) && text.length <= 64;
             },
             isRemoved: function(comment) {
