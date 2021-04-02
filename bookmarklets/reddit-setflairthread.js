@@ -48,6 +48,7 @@ javascript: (function () {
             initCSS: function () {
                 var css = '#flair-output { color: #000; position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 999; overflow: visible; }';
                 css += '#flair-output button { width: 100%; margin: .5em 0; display: block; text-align: left; text-transform: none; }';
+                css += '#flair-output button.likes { background: #e17500; }';
                 css += '#flair-output button a { pointer-events: none; }';
                 css += '#flair-output button .author { float: left; opacity: .6; }';
                 css += '#flair-output button .points { float: right; opacity: .6; }';
@@ -254,27 +255,28 @@ javascript: (function () {
 
                 if (comment.replies) {
                     comment.replies.data.children.forEach(flair.parse.comment);
-                } else if (!fdata.stream.noReplies.includes(comment.id) && confirm(comment.author + ' has a request with no replies')) {
+                } else if (flair.helpers.isValidRequest(comment) && !fdata.stream.noReplies.includes(comment.id) && confirm(comment.author + ' has a request with no replies')) {
                     fdata.stream.noReplies.push(comment.id);
                     window.open('http://reddit.com/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + comment.id + '?context=3');
                 }
             },
             reply: function (comment) {
-                if (fdata.requests[comment.parent_id]) {
-                    if (!comment.removed && !comment.spam) {
+                if (flair.helpers.isValidRequest(comment)) {
+                    if (fdata.requests[comment.parent_id]) {
                         fdata.requests[comment.parent_id].replies.push({
                             ids: [comment.id],
                             name: comment.author,
                             parentName: fdata.requests[comment.parent_id].name,
                             score: comment.score,
                             text: flair.parse.flairText(comment),
-                            removed: comment.removed || comment.spam
+                            likes: comment.likes,
+                            removed: comment.removed || comment.spam || comment.banned_by
                         });
                         fdata.stats.attempts ++;
                         fdata.stats.attemptscore += comment.score;
+                    } else if (confirm('Somehow I have a child comment with no parent: ' + comment.id)) {
+                        window.open('http://reddit.com/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + comment.id + '?context=3');
                     }
-                } else if (confirm('Somehow I have a child comment with no parent: ' + comment.id)) {
-                    window.open('http://reddit.com/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + comment.id + '?context=3');
                 }
             },
             flairText: function(comment) {
@@ -286,14 +288,7 @@ javascript: (function () {
                 return flairText;
             },
             tiedReplies: function(replies) {
-                let validReplies = replies.filter(function(reply) {
-                        /* No mod removals */
-                        return !reply.removed;
-                    })
-                    .filter(function(reply) {
-                        /* Length check. */
-                        return reply.text.length <= 64;
-                    });
+                let validReplies = replies.filter(flair.helpers.isValidRequest);
 
                 var highScore = Math.max.apply(null, validReplies.map(function(reply) {
                     return reply.score;
@@ -338,7 +333,7 @@ javascript: (function () {
                         var str = '<div>Resolving ties: ' + fdata.stream.ties.length + ' remaining</div>';
                         str += '<div class="parent_author">Flair for /u/' + request.name + ' has a tie. Choose a winner.</div>';
                         request.ties.forEach(function (reply, index) {
-                            str += '<button class="tiebreaker" data-parent="' + key + '" data-index="' + index + '">' +
+                            str += `<button class="tiebreaker ${reply.likes ? 'likes' : ''}" data-parent="${key}" data-index="${index}">` +
                                 '<div><span class="author">/u/' + reply.name + '</span>  <span class="points">' + reply.score + ' points</span></div>' +
                                 '<div class="text">' + reply.text + '</div>' +
                                 '</button>';
@@ -600,6 +595,10 @@ javascript: (function () {
                 }
                 diff = Math.round(diff / 1000);
                 return [Math.floor(diff / 60) + ':' + ('0' + (diff % 60)).slice(-2), 'minutes'];
+            },
+            isValidRequest: function(request) {
+                let text = request.text || request.body;
+                return !request.removed && !request.spam && !request.banned_by && text.length <= 64;
             }
         }
     };
