@@ -280,7 +280,7 @@ javascript: (function () {
                 }
             },
             flairText: function(comment) {
-                var flairText = flair.helpers.decode(flair.helpers.decode(comment.body_html.trim()).replace(/<.*?>/gm, '')).replace(/[\n\r]/g, '') || comment.body.trim();
+                var flairText = flair.helpers.decode(flair.helpers.decode(String(comment.body_html || '').trim()).replace(/<.*?>/gm, '')).replace(/[\n\r]/g, '') || comment.body.trim();
                 flairText = flairText.match(/\[.{0,62}\]/m) ? flairText.match(/\[.{0,62}\]/m)[0] : flairText;
                 if (flairText.length <= 62 && !flairText.match(/^\[/)) { flairText = '[' + flairText; } /*Leading bracket*/
                 if (flairText.length <= 63 && !flairText.match(/\]$/)) { flairText += ']'; } /*Trailing bracket*/
