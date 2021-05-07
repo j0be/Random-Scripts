@@ -399,7 +399,7 @@ javascript: (function () {
                 postBody += flair.output.stats();
                 postBody += '\n\n---\n\n[Here\'s a link to the flair thread](/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + ')\n';
 
-                var commentBody = 'Here\'s how much bias I had to specific users this month when resolving ties:\n\n';
+                var commentBody = 'Here\'s how the **replies** that were tied shook out:\n\n';
                 commentBody += flair.output.tieStats();
 
                 var output = '<textarea id="postBody" style="white-space: nowrap; height: 50vh; width: 15vw;">' + postBody + '</textarea>';
