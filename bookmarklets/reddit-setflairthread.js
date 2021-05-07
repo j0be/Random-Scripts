@@ -459,7 +459,7 @@ javascript: (function () {
                     '\n\n';
 
                 var footnotes = '**Definitions**\n\n' +
-                    '^(* had a tie that was resolved)    \n' +
+                    '^(* this request had a tie that was resolved)    \n' +
                     (fdata.stats.newUsers ? '^(' + fdata.mapper.new + ' new user)    \n' : '') +
                     (fdata.stats.disabledUsers ? '^(' + fdata.mapper.disabled + ' users with flair disabled)    \n' : '') +
                     '^("Wins" are replies to flair requests that are highest voted at the thread close)    \n' +
