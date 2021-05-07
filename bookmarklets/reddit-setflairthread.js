@@ -115,7 +115,6 @@ javascript: (function () {
         },
         set: {
             flairs: function() {
-                debugger;
                 /* Research # POST [/r/subreddit]/api/flaircsv */
                 fdata.times.applyStart = new Date();
 
