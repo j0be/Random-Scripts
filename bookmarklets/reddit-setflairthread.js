@@ -115,6 +115,7 @@ javascript: (function () {
         },
         set: {
             flairs: function() {
+                debugger;
                 /* Research # POST [/r/subreddit]/api/flaircsv */
                 fdata.times.applyStart = new Date();
 
@@ -201,7 +202,7 @@ javascript: (function () {
                 }
             },
             comment: function (comment) {
-                var isRequest = comment.data.parent_id.slice(0, 2) === 't3';
+                var isRequest = !comment.data.depth;
                 if (comment.kind === 'more') {
                     var ids = isRequest ?
                         comment.data.children :
@@ -209,13 +210,7 @@ javascript: (function () {
                     fdata.stream.moreLinks = fdata.stream.moreLinks.concat(ids);
                 } else {
                     flair.parse.checkFlair(comment.data);
-
-                    if (isRequest) {
-                        flair.parse.request(comment.data);
-                    } else if (!fdata.stream.commentIds.includes(comment.data.id)) {
-                        fdata.stream.commentIds.push(comment.data.id);
-                        flair.parse.reply(comment.data);
-                    }
+                    isRequest ? flair.parse.request(comment.data) : flair.parse.reply(comment.data);
                 }
             },
             checkFlair: function (comment) {
@@ -261,21 +256,25 @@ javascript: (function () {
                 }
             },
             reply: function (comment) {
-                if (!flair.helpers.isValidReply(comment)) {
-                    if (fdata.requests[comment.parent_id]) {
-                        fdata.requests[comment.parent_id].replies.push({
-                            ids: [comment.id],
-                            name: comment.author,
-                            parentName: fdata.requests[comment.parent_id].name,
-                            score: comment.score,
-                            text: flair.parse.flairText(comment),
-                            likes: comment.likes,
-                            removed: flair.helpers.isRemoved(comment)
-                        });
-                        fdata.stats.attempts ++;
-                        fdata.stats.attemptscore += comment.score;
-                    } else if (confirm('Somehow I have a child comment with no parent: ' + comment.id)) {
-                        window.open('http://reddit.com/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + comment.id + '?context=3');
+                if (!fdata.stream.commentIds.includes(comment.id)) {
+                    fdata.stream.commentIds.push(comment.id);
+
+                    if (flair.helpers.isValidReply(comment)) {
+                        if (fdata.requests[comment.parent_id]) {
+                            fdata.requests[comment.parent_id].replies.push({
+                                ids: [comment.id],
+                                name: comment.author,
+                                parentName: fdata.requests[comment.parent_id].name,
+                                score: comment.score,
+                                text: flair.parse.flairText(comment),
+                                likes: comment.likes,
+                                removed: flair.helpers.isRemoved(comment)
+                            });
+                            fdata.stats.attempts ++;
+                            fdata.stats.attemptscore += comment.score;
+                        } else if (confirm('Somehow I have a child comment with no parent: ' + comment.id)) {
+                            window.open('http://reddit.com/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + comment.id + '?context=3');
+                        }
                     }
                 }
             },
