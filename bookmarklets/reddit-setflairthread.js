@@ -201,7 +201,7 @@ javascript: (function () {
                 }
             },
             comment: function (comment) {
-                var isRequest = comment.data.parent_id.slice(0, 2) === 't3';
+                var isRequest = !comment.data.depth;
                 if (comment.kind === 'more') {
                     var ids = isRequest ?
                         comment.data.children :
@@ -209,13 +209,7 @@ javascript: (function () {
                     fdata.stream.moreLinks = fdata.stream.moreLinks.concat(ids);
                 } else {
                     flair.parse.checkFlair(comment.data);
-
-                    if (isRequest) {
-                        flair.parse.request(comment.data);
-                    } else if (!fdata.stream.commentIds.includes(comment.data.id)) {
-                        fdata.stream.commentIds.push(comment.data.id);
-                        flair.parse.reply(comment.data);
-                    }
+                    isRequest ? flair.parse.request(comment.data) : flair.parse.reply(comment.data);
                 }
             },
             checkFlair: function (comment) {
@@ -261,26 +255,30 @@ javascript: (function () {
                 }
             },
             reply: function (comment) {
-                if (!flair.helpers.isValidReply(comment)) {
-                    if (fdata.requests[comment.parent_id]) {
-                        fdata.requests[comment.parent_id].replies.push({
-                            ids: [comment.id],
-                            name: comment.author,
-                            parentName: fdata.requests[comment.parent_id].name,
-                            score: comment.score,
-                            text: flair.parse.flairText(comment),
-                            likes: comment.likes,
-                            removed: flair.helpers.isRemoved(comment)
-                        });
-                        fdata.stats.attempts ++;
-                        fdata.stats.attemptscore += comment.score;
-                    } else if (confirm('Somehow I have a child comment with no parent: ' + comment.id)) {
-                        window.open('http://reddit.com/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + comment.id + '?context=3');
+                if (!fdata.stream.commentIds.includes(comment.id)) {
+                    fdata.stream.commentIds.push(comment.id);
+
+                    if (flair.helpers.isValidReply(comment)) {
+                        if (fdata.requests[comment.parent_id]) {
+                            fdata.requests[comment.parent_id].replies.push({
+                                ids: [comment.id],
+                                name: comment.author,
+                                parentName: fdata.requests[comment.parent_id].name,
+                                score: comment.score,
+                                text: flair.parse.flairText(comment),
+                                likes: comment.likes,
+                                removed: flair.helpers.isRemoved(comment)
+                            });
+                            fdata.stats.attempts ++;
+                            fdata.stats.attemptscore += comment.score;
+                        } else if (confirm('Somehow I have a child comment with no parent: ' + comment.id)) {
+                            window.open('http://reddit.com/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + comment.id + '?context=3');
+                        }
                     }
                 }
             },
             flairText: function(comment) {
-                var flairText = flair.helpers.decode(flair.helpers.decode(comment.body_html.trim()).replace(/<.*?>/gm, '')).replace(/[\n\r]/g, '') || comment.body.trim();
+                var flairText = flair.helpers.decode(flair.helpers.decode(String(comment.body_html || '').trim()).replace(/<.*?>/gm, '')).replace(/[\n\r]/g, '') || (comment.body || comment.text || '').trim();
                 flairText = flairText.match(/\[.{0,62}\]/m) ? flairText.match(/\[.{0,62}\]/m)[0] : flairText;
                 if (flairText.length <= 62 && !flairText.match(/^\[/)) { flairText = '[' + flairText; } /*Leading bracket*/
                 if (flairText.length <= 63 && !flairText.match(/\]$/)) { flairText += ']'; } /*Trailing bracket*/
@@ -401,7 +399,7 @@ javascript: (function () {
                 postBody += flair.output.stats();
                 postBody += '\n\n---\n\n[Here\'s a link to the flair thread](/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + ')\n';
 
-                var commentBody = 'Here\'s how much bias I had to specific users this month when resolving ties:\n\n';
+                var commentBody = 'Here\'s how the **replies** that were tied shook out:\n\n';
                 commentBody += flair.output.tieStats();
 
                 var output = '<textarea id="postBody" style="white-space: nowrap; height: 50vh; width: 15vw;">' + postBody + '</textarea>';
@@ -461,7 +459,7 @@ javascript: (function () {
                     '\n\n';
 
                 var footnotes = '**Definitions**\n\n' +
-                    '^(* had a tie that was resolved)    \n' +
+                    '^(* this request had a tie that was resolved)    \n' +
                     (fdata.stats.newUsers ? '^(' + fdata.mapper.new + ' new user)    \n' : '') +
                     (fdata.stats.disabledUsers ? '^(' + fdata.mapper.disabled + ' users with flair disabled)    \n' : '') +
                     '^("Wins" are replies to flair requests that are highest voted at the thread close)    \n' +
