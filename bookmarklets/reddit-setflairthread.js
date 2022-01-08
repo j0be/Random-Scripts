@@ -485,12 +485,9 @@ javascript: (function () {
             },
             stats: function () {
                 let threadStats = [['\\#', 'Summary'], ['--:', ':--']];
-                var streamStats = [['\\#', 'Units', 'Summary'], ['--:', ':--', ':--']];
+                let streamStats = [['\\#', 'Units', 'Summary'], ['--:', ':--', ':--']];
 
-                streamStats.push(flair.helpers.getDiff(fdata.times.fullStart, fdata.times.fullEnd).concat(['Time to do everything']));
-                streamStats.push(flair.helpers.getDiff(fdata.times.loadStart, fdata.times.loadEnd).concat(['Loaded all data']));
                 streamStats.push([fdata.stats.moreLinksClicked, '', '"More" links loaded']);
-
                 if (fdata.stats.moreLinksClicked) {
                     streamStats.push(flair.helpers.getDiff(fdata.times.moreStart, fdata.times.moreEnd, fdata.stats.moreLinksClicked).concat(['Average "more" link load time']));
                 }
@@ -511,6 +508,10 @@ javascript: (function () {
                     streamStats.push(flair.helpers.getDiff(fdata.times.applyStart, fdata.times.applyEnd).concat(['Time to set new flairs']));
                     streamStats.push(flair.helpers.getDiff(fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests).concat(['Average time to set a single flair']));
                 }
+
+                streamStats.push(flair.helpers.getDiff(fdata.times.loadStart, fdata.times.loadEnd).concat(['Loaded all data']));
+                streamStats.push(flair.helpers.getDiff(fdata.times.fullStart, fdata.times.fullEnd).concat(['Time to do everything']));
+
                 if (fdata.stats.newUsers) {
                     threadStats.push([fdata.stats.newUsers, 'Users requested flair for the first time']);
                 }
