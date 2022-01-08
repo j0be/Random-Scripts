@@ -492,6 +492,7 @@ javascript: (function () {
                     streamStats.push(flair.helpers.getDiff(fdata.times.moreStart, fdata.times.moreEnd, fdata.stats.moreLinksClicked).concat(['Average "more" link load time']));
                 }
 
+                streamStats.push(flair.helpers.getDiff(fdata.times.loadStart, fdata.times.loadEnd).concat(['Loaded all data']));
                 threadStats.push([fdata.stats.requests, 'Flair requests']);
                 threadStats.push([fdata.stats.attempts, 'Flair attempts']);
                 threadStats.push([(fdata.stats.attempts / fdata.stats.requests).toFixed(2), 'Attempts per flair request']);
@@ -509,7 +510,6 @@ javascript: (function () {
                     streamStats.push(flair.helpers.getDiff(fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests).concat(['Average time to set a single flair']));
                 }
 
-                streamStats.push(flair.helpers.getDiff(fdata.times.loadStart, fdata.times.loadEnd).concat(['Loaded all data']));
                 streamStats.push(flair.helpers.getDiff(fdata.times.fullStart, fdata.times.fullEnd).concat(['Time to do everything']));
 
                 if (fdata.stats.newUsers) {
