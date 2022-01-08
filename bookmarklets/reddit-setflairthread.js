@@ -33,7 +33,7 @@ javascript: (function () {
             applyEnd: ''
         },
         mapper: {
-            tied: '\\*',
+            tied: '&#916;',
             new: '&#8224;',
             disabled: '&#8225;'
         }
@@ -46,15 +46,18 @@ javascript: (function () {
                 flair.get.allComments();
             },
             initCSS: function () {
-                var css = '#flair-output { color: #000; position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 999; overflow: visible; }';
-                css += '#flair-output button { width: 100%; margin: .5em 0; display: block; text-align: left; text-transform: none; }';
-                css += '#flair-output button.likes { background: #e17500; }';
-                css += '#flair-output button a { pointer-events: none; }';
-                css += '#flair-output button .author { float: left; opacity: .6; }';
-                css += '#flair-output button .points { float: right; opacity: .6; }';
-                css += '#flair-output button .text { float: left; clear: both; font-size: 1.2em; margin-top: .3em;}';
-                css += '#flair-output::before { content: ""; display: block; position: fixed; background: rgba(0, 0, 0, .4); top: -100vh; left: -100vw; right: -100vw; bottom: -100vh; z - index: -1; pointer-events: none; }';
-                css += '#flair-output > div { padding: 15px; background: #fff; position: relative; z-index: 1; max-height: 80vh; overflow: auto; }';
+                var css = '#flair-output { color: #000; position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 999; overflow: visible; } ';
+                css += '#flair-output button { width: 100%; margin: .5em 0; display: block; text-align: left; text-transform: none; } ';
+                css += '#flair-output button.likes { background: #e17500; } ';
+                css += '#flair-output button a { pointer-events: none; } ';
+                css += '#flair-output button .author { float: left; opacity: .6; } ';
+                css += '#flair-output button .points { float: right; opacity: .6; } ';
+                css += '#flair-output button .text { float: left; clear: both; font-size: 1.2em; margin-top: .3em;} ';
+                css += '#flair-output::before { content: ""; display: block; position: fixed; background: rgba(0, 0, 0, .4); top: -100vh; left: -100vw; right: -100vw; bottom: -100vh; z - index: -1; pointer-events: none; } ';
+                css += '#flair-output > div { padding: 15px; background: #fff; position: relative; z-index: 1; max-height: 80vh; overflow: auto; } ';
+                css += '#flair-output div.parent_author { font-size: 14px; margin: .25em 0; }  ';
+                css += '#flair-output div.parent_author span { font-weight: bold; }  ';
+                css += '#flair-output .author_reply { margin: -.5em 0 1em; background: #eee; padding: 4px 10px; } ';
 
                 var styler = document.createElement('style');
                 styler.setAttribute('id', 'styler');
@@ -243,6 +246,7 @@ javascript: (function () {
                     fdata.requests[comment.name] = {
                         id: comment.id,
                         name: comment.author,
+                        author: comment.author,
                         replies: []
                     };
                 }
@@ -259,15 +263,19 @@ javascript: (function () {
                     fdata.stream.commentIds.push(comment.id);
 
                     if (flair.helpers.isValidReply(comment)) {
-                        if (fdata.requests[comment.parent_id]) {
-                            fdata.requests[comment.parent_id].replies.push({
+                        let parent = fdata.requests[comment.parent_id];
+                        if (parent) {
+                            parent.replies.push({
                                 ids: [comment.id],
                                 name: comment.author,
-                                parentName: fdata.requests[comment.parent_id].name,
+                                parentName: parent.author,
                                 score: comment.score,
                                 text: flair.parse.flairText(comment),
                                 likes: comment.likes,
-                                removed: flair.helpers.isRemoved(comment)
+                                removed: flair.helpers.isRemoved(comment),
+                                parentReply: (comment?.replies?.data?.children || []).find((reply) => {
+                                    return parent.author === reply.data.author;
+                                })?.data?.body
                             });
                             fdata.stats.attempts ++;
                             fdata.stats.attemptscore += comment.score;
@@ -329,12 +337,18 @@ javascript: (function () {
                     var request = fdata.requests[key];
                     if (request && request.ties) {
                         var str = '<div>Resolving ties: ' + fdata.stream.ties.length + ' remaining</div>';
-                        str += '<div class="parent_author">Flair for /u/' + request.name + ' has a tie. Choose a winner.</div>';
+                        str += '<div class="parent_author">Flair for <span class="parent_author">/u/' + request.name + '</span> has a tie. Choose a winner.</div>';
                         request.ties.forEach(function (reply, index) {
                             str += `<button class="tiebreaker ${reply.likes ? 'likes' : ''}" data-parent="${key}" data-index="${index}">` +
-                                '<div><span class="author">/u/' + reply.name + '</span>  <span class="points">' + reply.score + ' points</span></div>' +
+                                '<div>' +
+                                    '<span class="author">/u/' + reply.name + '</span>' +
+                                    '<span class="points">' + reply.score + ' points</span>' +
+                                '</div>' +
                                 '<div class="text">' + reply.text + '</div>' +
-                                '</button>';
+                            '</button>';
+                            if (reply.parentReply) {
+                                str += `<div class="author_reply">${reply.parentReply}</div>`;
+                            }
                         });
                         flair.output.modal(str);
                         Array.from(document.getElementsByClassName('tiebreaker')).forEach(function (el) {
