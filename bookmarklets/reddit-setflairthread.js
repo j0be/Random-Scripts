@@ -247,6 +247,7 @@ javascript: (function () {
                         id: comment.id,
                         name: comment.author,
                         author: comment.author,
+                        score: comment.score,
                         replies: []
                     };
                 }
@@ -576,19 +577,21 @@ javascript: (function () {
             getLink: function (isRequest, comment) {
                 var name = isRequest ? comment.name : comment.parentName;
                 var len = comment.ids && comment.ids.length || 0;
+                let context = !isRequest ? '?context=1' : '';
                 var str;
                 if (len === 1) {
-                    var id = comment.ids[0] + (!isRequest ? '?context=1' : '');
-                    str = '[' + flair.helpers.escape(name) + '](/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + id + ')';
+                    var id = comment.ids[0] + context;
+                    str = `[${flair.helpers.escape(name)}](/r/${r.config.cur_listing}/comments/${fdata.stream.threadId}/${comment.score}/${id})`;
                     str += flair.helpers.getAttributes(name);
                 } else {
-                    str = flair.helpers.escape(name) + flair.helpers.getAttributes(name);
+                    str = flair.helpers.escape(name);
                     if (len) {
                         comment.ids.forEach(function(id, index) {
-                            id += !isRequest ? '?context=1' : '';
-                            str += ' [[' + index + ']](/r/' + r.config.cur_listing + '/comments/' + fdata.stream.threadId + '/x/' + id + ')';
+                            id += context;
+                            str += ` [[${index}]](/r/${r.config.cur_listing}/comments/${fdata.stream.threadId}/${comment.score}/${id})`;
                         });
                     }
+                    str += flair.helpers.getAttributes(name);
                 }
                 return str.trim();
             },
