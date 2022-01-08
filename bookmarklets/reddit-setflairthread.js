@@ -474,7 +474,7 @@ javascript: (function () {
                     '\n\n';
 
                 var footnotes = '**Definitions**\n\n' +
-                    '^(* this request had a tie that was resolved)    \n' +
+                    `^(${fdata.mapper.tied} this request had a tie that was resolved)    \n` +
                     (fdata.stats.newUsers ? '^(' + fdata.mapper.new + ' new user)    \n' : '') +
                     (fdata.stats.disabledUsers ? '^(' + fdata.mapper.disabled + ' users with flair disabled)    \n' : '') +
                     '^("Wins" are replies to flair requests that are highest voted at the thread close)    \n' +
@@ -484,30 +484,45 @@ javascript: (function () {
                 return mainTable + moochers + footnotes;
             },
             stats: function () {
-                var stats = [['\\#', 'Units', 'Summary'], ['--:', ':--', ':--']];
-                stats.push(flair.helpers.getDiff(fdata.times.fullStart, fdata.times.fullEnd).concat(['Time to do everything']));
-                stats.push(flair.helpers.getDiff(fdata.times.loadStart, fdata.times.loadEnd).concat(['Loaded all data']));
-                stats.push([fdata.stats.moreLinksClicked, '', '"More" links loaded']);
-                if (fdata.stats.moreLinksClicked) { stats.push(flair.helpers.getDiff(fdata.times.moreStart, fdata.times.moreEnd, fdata.stats.moreLinksClicked).concat(['Average "more" link load time'])); }
-                stats.push([fdata.stats.requests, '', 'Flair requests']);
-                stats.push([fdata.stats.attempts, '', 'Flair attempts']);
-                stats.push([(fdata.stats.attempts / fdata.stats.requests).toFixed(2), '', 'Attempts per flair request']);
-                stats.push([(fdata.stats.winscore / fdata.stats.requests).toFixed(2), '', 'Karma average per winning flair']);
-                stats.push([(fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2), '', 'Karma average per attempt']);
+                let threadStats = [['\\#', 'Summary'], ['--:', ':--']];
+                var streamStats = [['\\#', 'Units', 'Summary'], ['--:', ':--', ':--']];
+
+                streamStats.push(flair.helpers.getDiff(fdata.times.fullStart, fdata.times.fullEnd).concat(['Time to do everything']));
+                streamStats.push(flair.helpers.getDiff(fdata.times.loadStart, fdata.times.loadEnd).concat(['Loaded all data']));
+                streamStats.push([fdata.stats.moreLinksClicked, '', '"More" links loaded']);
+
+                if (fdata.stats.moreLinksClicked) {
+                    streamStats.push(flair.helpers.getDiff(fdata.times.moreStart, fdata.times.moreEnd, fdata.stats.moreLinksClicked).concat(['Average "more" link load time']));
+                }
+
+                threadStats.push([fdata.stats.requests, 'Flair requests']);
+                threadStats.push([fdata.stats.attempts, 'Flair attempts']);
+                threadStats.push([(fdata.stats.attempts / fdata.stats.requests).toFixed(2), 'Attempts per flair request']);
+                threadStats.push([(fdata.stats.winscore / fdata.stats.requests).toFixed(2), 'Karma average per winning flair']);
+                threadStats.push([(fdata.stats.attemptscore / fdata.stats.attempts).toFixed(2), 'Karma average per attempt']);
+
                 if (fdata.stats.ties) {
-                    stats.push([fdata.stats.ties, '', 'Requests ended in ties']);
-                    stats.push([((fdata.stats.ties / fdata.stats.requests)*100).toFixed(1) + '%', '', 'Requests ended in ties']);
-                    stats.push(flair.helpers.getDiff(fdata.times.tieStart, fdata.times.tieEnd).concat(['Time to resolve ties']));
-                    stats.push(flair.helpers.getDiff(fdata.times.tieStart, fdata.times.tieEnd, fdata.stats.ties).concat(['Average time to resolve a single tie']));
+                    threadStats.push([fdata.stats.ties, 'Requests ended in ties']);
+                    threadStats.push([((fdata.stats.ties / fdata.stats.requests)*100).toFixed(1) + '%', 'Requests ended in ties']);
+                    streamStats.push(flair.helpers.getDiff(fdata.times.tieStart, fdata.times.tieEnd).concat(['Time to resolve ties']));
+                    streamStats.push(flair.helpers.getDiff(fdata.times.tieStart, fdata.times.tieEnd, fdata.stats.ties).concat(['Average time to resolve a single tie']));
                 }
                 if (fdata.times.applyStart && fdata.times.applyEnd) {
-                    stats.push(flair.helpers.getDiff(fdata.times.applyStart, fdata.times.applyEnd).concat(['Time to set new flairs']));
-                    stats.push(flair.helpers.getDiff(fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests).concat(['Average time to set a single flair']));
+                    streamStats.push(flair.helpers.getDiff(fdata.times.applyStart, fdata.times.applyEnd).concat(['Time to set new flairs']));
+                    streamStats.push(flair.helpers.getDiff(fdata.times.applyStart, fdata.times.applyEnd, fdata.stats.requests).concat(['Average time to set a single flair']));
                 }
-                if (fdata.stats.newUsers) { stats.push([fdata.stats.newUsers, '', 'Users requested flair for the first time']); }
-                if (fdata.stats.disabledUsers) { stats.push([fdata.stats.disabledUsers, '', 'Users had their flair disabled when flair was applied']); }
+                if (fdata.stats.newUsers) {
+                    threadStats.push([fdata.stats.newUsers, 'Users requested flair for the first time']);
+                }
+                if (fdata.stats.disabledUsers) {
+                    threadStats.push([fdata.stats.disabledUsers, 'Users had their flair disabled when flair was applied']);
+                }
 
-                return '#Some stats:\n\n' + flair.helpers.table(stats) + '\n\n';
+                return '#Some stats\n\n' +
+                    '**Thread stats:**\n\n' +
+                    flair.helpers.table(threadStats) + '\n\n' +
+                    '**My stats:**\n\n' +
+                    flair.helpers.table(streamStats) + '\n\n';
             },
             tieStats: function () {
                 var tieStats = [
