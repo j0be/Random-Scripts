@@ -177,7 +177,7 @@ window.timeMachine = {
                     let div = document.createElement('div');
                     div.innerHTML = item.text;
                     div.style = 'flex-basis: 100%; text-align: center;';
-                    dive.addEventListener('click', timeMachine.prompt);
+                    div.addEventListener('click', timeMachine.prompt);
                     menu.appendChild(div);
                 }
             });
