@@ -111,7 +111,7 @@ window.timeMachine = {
             }
         }
 
-        object.winPercentage = Math.round(100 * object.gamesWon / object.gamesPlayed);
+        object.winPercentage = Math.floor(100 * object.gamesWon / object.gamesPlayed);
         object.averageGuesses = Number((Object.keys(object.guesses).map((key) => {
             let num = Number(key === 'fail' ? 7 : key);
             return object.guesses[key] * num;
