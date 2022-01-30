@@ -219,7 +219,9 @@ window.timeMachine = {
                     'Please enter a valid day');
             day = prompt(message, currentDay);
         }
-        timeMachine.getDay(day);
+        if (day !== currentDay) {
+            timeMachine.getDay(day);
+        }
     }
 };
 
