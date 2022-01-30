@@ -54,7 +54,7 @@ window.timeMachine = {
         window.wordle = {};
         window.wordle.hash = 'e65ce0a5';
 
-        var script = document.createElement('script');
+        let script = document.createElement('script');
         script.src = jsFileName;
         script.onload = () => {
             let game = document.createElement('game-app');
@@ -177,6 +177,7 @@ window.timeMachine = {
                     let div = document.createElement('div');
                     div.innerHTML = item.text;
                     div.style = 'flex-basis: 100%; text-align: center;';
+                    dive.addEventListener('click', timeMachine.prompt);
                     menu.appendChild(div);
                 }
             });
@@ -200,6 +201,18 @@ window.timeMachine = {
         let day = event.target.dataset.day;
         if (isNaN(day)) {
             day = mapper[day];
+        }
+        timeMachine.getDay(day);
+    },
+    prompt: () => {
+        let message = 'What day would you like to jump to?';
+        let currentDay = timeMachine.day;
+        let day = prompt(message, currentDay);
+        while (day.trim().match(/\D/) || Number(day) < 0 || Number(day) > timeMachine.maxOffset) {
+            alert(Number(day) > timeMachine.maxOffset ?
+                    `Please enter a day less than ${timeMachine.maxOffset}` :
+                    'Please enter a valid day');
+            day = prompt(message, currentDay);
         }
         timeMachine.getDay(day);
     }
