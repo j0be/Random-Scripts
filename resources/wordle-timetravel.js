@@ -126,7 +126,8 @@ window.timeMachine = {
                 rowIndex: 0,
                 gameStatus: 'IN_PROGRESS',
                 solution: timeMachine.puzzles[day],
-                lastPlayedTs: Date.now()
+                lastPlayedTs: Date.now(),
+                hardMode: document.querySelector('game-app').hardMode
             });
             window.localStorage.setItem('gameState', JSON.stringify(gameState));
             if (!window.localStorage.getItem(`gameState_${day}`)) {
