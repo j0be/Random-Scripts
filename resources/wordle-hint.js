@@ -131,7 +131,7 @@ fetch(jsFile)
                 output.reverse();
             }
 
-            alert(output.filter(Boolean).join('\n\n---\n\n').replace(new RegExp(document.querySelector('game-app').solution, 'g'), '* ' + document.querySelector('game-app').solution));
+            alert(output.filter(Boolean).join('\n---\n').replace(new RegExp(document.querySelector('game-app').solution, 'g'), '* ' + document.querySelector('game-app').solution));
         }
     });
 
