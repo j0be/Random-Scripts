@@ -216,7 +216,7 @@ window.timeMachine = {
             document.querySelector('game-app')
                 .shadowRoot.querySelector('game-theme-manager')
                 .querySelector('#timeMachine')
-                .querySelector(`button:nth-child(${event.shiftKey ? '4' : '3' })`)
+                .querySelector(`button:nth-child(${event.shiftKey ? '5' : '4' })`)
                 .click();
         }
     },
