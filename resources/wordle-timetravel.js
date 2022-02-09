@@ -40,6 +40,7 @@ window.timeMachine = {
             }
 
             timeMachine.appendButtons();
+            timeMachine.addListeners();
         });
     },
     reset: (day) => {
@@ -186,6 +187,37 @@ window.timeMachine = {
             });
         } else {
             setTimeout(timeMachine.appendButtons, 50);
+        }
+    },
+    addListeners: function addListeners() {
+        /* Some QOL keyboard functionality */
+        document.body.addEventListener('keyup', timeMachine.closeDialog);
+        document.body.addEventListener('keyup', timeMachine.keyNavigate);
+    },
+
+    closeDialog: function closeDialog(event) {
+        if (event.keyCode === 27) {
+            document.querySelector('game-app')
+                .shadowRoot.querySelector('game-theme-manager')
+                .querySelector('game-modal')
+                .shadowRoot.querySelector('game-icon')
+                .click();
+        }
+    },
+    keyNavigate: function keyNavigate(event) {
+        if (event.keyCode === 37) { /* Left arrow */
+            document.querySelector('game-app')
+                .shadowRoot.querySelector('game-theme-manager')
+                .querySelector('#timeMachine')
+                .querySelector(`button:nth-child(${event.shiftKey ? '1' : '2' })`)
+                .click();
+        }
+        if (event.keyCode === 39) { /* Right arrow */
+            document.querySelector('game-app')
+                .shadowRoot.querySelector('game-theme-manager')
+                .querySelector('#timeMachine')
+                .querySelector(`button:nth-child(${event.shiftKey ? '4' : '3' })`)
+                .click();
         }
     },
 
