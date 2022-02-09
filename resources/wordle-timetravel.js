@@ -134,9 +134,7 @@ window.timeMachine = {
                 hardMode: document.querySelector('game-app').hardMode
             });
             window.localStorage.setItem('gameState', JSON.stringify(gameState));
-            if (!window.localStorage.getItem(`gameState_${day}`)) {
-                window.localStorage.setItem(`gameState_${day}`, JSON.stringify(gameState));
-            }
+            window.localStorage.setItem(`gameState_${day}`, JSON.stringify(gameState));
         }
 
         let loc = (new URL(document.location));
