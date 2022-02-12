@@ -3,7 +3,7 @@ window.timeMachine = {
     setup: () => {
         /* Get Data */
         let jsFileName = document.body.querySelector('[src*="main."]').getAttribute('src');
-        let jsPromise = fetch(`${document.location.origin}${document.location.pathname}${jsFileName}`)
+        let jsPromise = fetch(`${document.location.origin}${document.location.pathname.match(/.*\//)[0]}${jsFileName}`)
             .then(response => response.text())
             .then(result => {
                 let puzzles = JSON.parse(result.match(/\[("[a-z]{5}", ?){3}.*?\]/g)?.[0]);
@@ -62,6 +62,7 @@ window.timeMachine = {
             if (day) {
                 setTimeout(() => {
                     document.querySelector('game-app').dayOffset = timeMachine.day;
+                    document.querySelector('game-app').solution = timeMachine.puzzles[timeMachine.day];
                     timeMachine.appendButtons();
                     window.rollingBackup = setInterval(() => {
                         timeMachine.backup();
@@ -124,7 +125,7 @@ window.timeMachine = {
         if (existingDay && existingDay.solution === timeMachine.puzzles[day]) {
             window.localStorage.setItem('gameState', JSON.stringify(existingDay));
         } else if (timeMachine.puzzles && timeMachine.puzzles[day]) {
-            let gameState = Object.assign(JSON.parse(window.localStorage.getItem('gameState')), {
+            let gameState = Object.assign(JSON.parse(window.localStorage.getItem('gameState')) || {}, {
                 boardState: ['', '', '', '', '', ''],
                 evaluations: [null, null, null, null, null, null],
                 rowIndex: 0,
@@ -134,9 +135,7 @@ window.timeMachine = {
                 hardMode: document.querySelector('game-app').hardMode
             });
             window.localStorage.setItem('gameState', JSON.stringify(gameState));
-            if (!window.localStorage.getItem(`gameState_${day}`)) {
-                window.localStorage.setItem(`gameState_${day}`, JSON.stringify(gameState));
-            }
+            window.localStorage.setItem(`gameState_${day}`, JSON.stringify(gameState));
         }
 
         let loc = (new URL(document.location));
