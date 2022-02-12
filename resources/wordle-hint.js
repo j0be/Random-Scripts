@@ -49,7 +49,7 @@ let absentReg = new RegExp('[' + absent.join('') + ']', 'i');
 
 /* Get available words */
 let jsFile = document.location.origin +
-    document.location.pathname +
+    document.location.pathname.match(/.*\//)[0] +
     document.body.querySelector('[src*="main."]').getAttribute('src');
 
 fetch(jsFile)
@@ -100,8 +100,6 @@ fetch(jsFile)
                 .sort((a, b) => { return [...new Set(b.split(''))].length - [...new Set(a.split(''))].length; })
                 .slice(0, 5)
                 .join('\n').trim();
-
-                debugger;
 
             let rankRev = rank.reverse();
             let inclStr = possibilities
