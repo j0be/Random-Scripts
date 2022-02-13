@@ -53,7 +53,7 @@ window.timeMachine = {
         document.body.querySelector('game-app')?.remove();
 
         window.wordle = {};
-        window.wordle.hash = 'e65ce0a5';
+        window.wordle.hash = 'bd4cb59c';
 
         let script = document.createElement('script');
         script.src = jsFileName;
@@ -124,9 +124,9 @@ window.timeMachine = {
     getDay: (day) => {
         let existingDay = JSON.parse(window.localStorage.getItem(`gameState_${day}`));
         if (existingDay && existingDay.solution === timeMachine.puzzles[day]) {
-            window.localStorage.setItem('gameState', JSON.stringify(existingDay));
+            window.localStorage.setItem('nyt-wordle-state', JSON.stringify(existingDay));
         } else if (timeMachine.puzzles && timeMachine.puzzles[day]) {
-            let gameState = Object.assign(JSON.parse(window.localStorage.getItem('gameState')) || {}, {
+            let gameState = Object.assign(JSON.parse(window.localStorage.getItem('nyt-wordle-state')) || {}, {
                 boardState: ['', '', '', '', '', ''],
                 evaluations: [null, null, null, null, null, null],
                 rowIndex: 0,
@@ -135,7 +135,7 @@ window.timeMachine = {
                 lastPlayedTs: Date.now(),
                 hardMode: document.querySelector('game-app').hardMode
             });
-            window.localStorage.setItem('gameState', JSON.stringify(gameState));
+            window.localStorage.setItem('nyt-wordle-state', JSON.stringify(gameState));
             window.localStorage.setItem(`gameState_${day}`, JSON.stringify(gameState));
         }
 
@@ -149,14 +149,17 @@ window.timeMachine = {
         if (document.querySelector('game-app')) {
             let day = Number(timeMachine.day);
             let header = document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelector('header');
-            header.style = 'flex-wrap: wrap; height: calc(var(--header-height) + 1.5rem);';
+            header.style = 'flex-wrap: wrap; height: auto; align-itmes: center;';
             let menu = document.querySelector('#timeMachine') || document.createElement('div');
             if (!document.querySelector('#timeMachine')) {
                 menu.id = 'timeMachine';
                 menu.style = 'flex-basis: 100%; display: flex; justify-content: space-between; align-items: center;';
                 header.appendChild(menu);
             }
-            document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelector('.title').style = 'top: 0;'
+            let title = document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelector('.title');
+            title.setAttribute('href', document.location.pathname);
+            title.style = 'color: white; text-decoration: none; pointer-events: all;';
+            title.outerHTML = title.outerHTML.replace(/div/gi, 'a');
 
             let mapper = [
                 { text: '&#171;', day: 0, filter: 0 },
@@ -186,6 +189,9 @@ window.timeMachine = {
                     menu.appendChild(div);
                 }
             });
+
+            let root = document.documentElement;
+            root.style.setProperty('--header-height', header.offsetHeight + "px");
         } else {
             setTimeout(timeMachine.appendButtons, 50);
         }
@@ -224,7 +230,7 @@ window.timeMachine = {
 
     backup: () => {
         let day = document.querySelector('game-app').dayOffset;
-        let gameState = window.localStorage.getItem('gameState');
+        let gameState = window.localStorage.getItem('nyt-wordle-state');
         if (gameState) {
             window.localStorage.setItem(`gameState_${day}`, gameState);
         }
