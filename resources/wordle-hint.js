@@ -1,5 +1,3 @@
-let rows = document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelectorAll('game-row');
-
 /* Get available words */
 let jsFile = document.location.origin +
     document.location.pathname.match(/.*\//)[0] +
@@ -21,6 +19,7 @@ if (timeTravel.puzzles || window.puzzles) {
 }
 
 function getSuggestion(puzzles) {
+    let rows = document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelectorAll('game-row');
     let correct = new Array(5).fill('.');
     let present = [];
     let presentPositionExclude = new Array(5).fill('.');
@@ -81,16 +80,16 @@ function getSuggestion(puzzles) {
         return isCorrectMatch && isPresentMatch && isPresentPosition && !isAbsentMatch;
     });
 
-    let correctExclusionReg = new RegExp(`[${correct.join('').replace(/\./g,'')}]`);
-    let exclusions = puzzles.filter((puzzle) => {
-        let isAbsentMatch = absent.length && !!puzzle.match(absentReg);
-        let hasCorrect = !!puzzle.match(correctExclusionReg);
-        let isPresentMatch = present.every((letter) => {
-            return puzzle.includes(letter);
-        });
+    // let correctExclusionReg = new RegExp(`[${correct.join('').replace(/\./g,'')}]`);
+    // let exclusions = puzzles.filter((puzzle) => {
+    //     let isAbsentMatch = absent.length && !!puzzle.match(absentReg);
+    //     let hasCorrect = !!puzzle.match(correctExclusionReg);
+    //     let isPresentMatch = present.every((letter) => {
+    //         return puzzle.includes(letter);
+    //     });
 
-        return !isPresentMatch && !isAbsentMatch && !hasCorrect;
-    });
+    //     return !isPresentMatch && !isAbsentMatch && !hasCorrect;
+    // });
 
     let rankArr = new Array(5).fill('').map(() => {return {}; });
     possibilities.forEach((word) => {
@@ -104,7 +103,7 @@ function getSuggestion(puzzles) {
         .sort((a, b) => {
             let aNum = getWordRank(rankArr, a);
             let bNum = getWordRank(rankArr, b);
-            return aNum > bNum ? 1 : aNum < bNum ? -1 : 0;
+            return aNum > bNum ? -1 : aNum < bNum ? 1 : 0;
         })
         .sort((a, b) => { return [...new Set(b.split(''))].length - [...new Set(a.split(''))].length; })
         .slice(0, 5)
