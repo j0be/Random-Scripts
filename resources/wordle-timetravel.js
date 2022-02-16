@@ -28,7 +28,9 @@ window.timeMachine = {
             let day = params.get('day') ?? document.querySelector('game-app').dayOffset;
             timeMachine.day = day;
             setTimeout(() => {
-                document.querySelector('game-app').dayOffset = day;
+                if (document.querySelector('game-app')) {
+                    document.querySelector('game-app').dayOffset = day;
+                }
             }, 100);
 
             window.rollingBackup = setInterval(() => {
@@ -36,7 +38,8 @@ window.timeMachine = {
             }, 500);
 
             if (document.querySelector('game-app').solution !== timeMachine.puzzles[day]) {
-                timeMachine.getDay(day);
+                let index = timeMachine.puzzles.indexOf(document.querySelector('game-app').solution);
+                timeMachine.getDay(index || day);
             }
 
             timeMachine.appendButtons();
@@ -152,11 +155,8 @@ window.timeMachine = {
             let header = document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelector('header');
             header.style = 'flex-wrap: wrap; height: auto; align-itmes: center;';
             let menu = document.querySelector('#timeMachine') || document.createElement('div');
-            if (!document.querySelector('#timeMachine')) {
-                menu.id = 'timeMachine';
-                menu.style = 'flex-basis: 100%; display: flex; justify-content: space-between; align-items: center;';
-                header.appendChild(menu);
-            }
+            menu.id = 'timeMachine';
+            menu.style = 'flex-basis: 100%; display: flex; justify-content: space-between; align-items: center;';
             let title = document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelector('.title');
             title.setAttribute('href', document.location.pathname);
             title.style = 'color: white; text-decoration: none; pointer-events: all;';
@@ -172,7 +172,7 @@ window.timeMachine = {
             mapper.forEach((item) => {
                 if (item.hasOwnProperty('filter')) {
                     let button = document.createElement('button');
-                    button.setAttribute('class', 'icon');
+                    button.setAttribute('class', 'icon timeTravel');
                     button.innerHTML = item.text;
                     button.setAttribute('style', 'color: var(--color-tone-1); font-size: 2rem;');
                     button.addEventListener('click', timeMachine.click);
@@ -184,6 +184,7 @@ window.timeMachine = {
                     menu.appendChild(button);
                 } else {
                     let div = document.createElement('div');
+                    div.setAttribute('class', 'timeTravel');
                     div.innerHTML = `<span style="padding: 0 1em;">${item.text}</span>`;
                     div.style = 'flex-basis: 100%; text-align: center;';
                     div.childNodes[0].addEventListener('click', timeMachine.prompt);
@@ -191,6 +192,9 @@ window.timeMachine = {
                 }
             });
 
+            if (!header.querySelector('#timeMachine')) {
+                header.appendChild(menu);
+            }
             let root = document.documentElement;
             root.style.setProperty('--header-height', header.offsetHeight + "px");
         } else {
