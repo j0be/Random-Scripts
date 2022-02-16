@@ -124,6 +124,7 @@ window.timeMachine = {
     getDay: (day) => {
         let existingDay = JSON.parse(window.localStorage.getItem(`gameState_${day}`));
         if (existingDay && existingDay.solution === timeMachine.puzzles[day]) {
+            existingDay.lastPlayedTs = Date.now();
             window.localStorage.setItem('nyt-wordle-state', JSON.stringify(existingDay));
         } else if (timeMachine.puzzles && timeMachine.puzzles[day]) {
             let gameState = Object.assign(JSON.parse(window.localStorage.getItem('nyt-wordle-state')) || {}, {
