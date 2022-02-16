@@ -80,33 +80,20 @@ function getSuggestion(puzzles) {
         return isCorrectMatch && isPresentMatch && isPresentPosition && !isAbsentMatch;
     });
 
-    // let correctExclusionReg = new RegExp(`[${correct.join('').replace(/\./g,'')}]`);
-    // let exclusions = puzzles.filter((puzzle) => {
-    //     let isAbsentMatch = absent.length && !!puzzle.match(absentReg);
-    //     let hasCorrect = !!puzzle.match(correctExclusionReg);
-    //     let isPresentMatch = present.every((letter) => {
-    //         return puzzle.includes(letter);
-    //     });
-
-    //     return !isPresentMatch && !isAbsentMatch && !hasCorrect;
-    // });
-
-    let rankArr = new Array(5).fill('').map(() => {return {}; });
-    possibilities.forEach((word) => {
-        word.split('').forEach((letter, index) => {
-            rankArr[index][letter] ??= 0;
-            rankArr[index][letter] ++;
-        });
-    });
-
+    let rankArr = getRankArr(puzzles);
+    let possibleRankArr = getRankArr(possibilities);
     let inclStr = possibilities
         .sort((a, b) => {
             let aNum = getWordRank(rankArr, a);
             let bNum = getWordRank(rankArr, b);
             return aNum > bNum ? -1 : aNum < bNum ? 1 : 0;
         })
-        .sort((a, b) => { return [...new Set(b.split(''))].length - [...new Set(a.split(''))].length; })
-        .slice(0, 5)
+        .sort((a, b) => {
+            let aNum = getWordRank(possibleRankArr, a);
+            let bNum = getWordRank(possibleRankArr, b);
+            return aNum > bNum ? -1 : aNum < bNum ? 1 : 0;
+        })
+        .slice(0, 10)
         .join('\n').trim();
 
     let output = [inclStr].map((str, index) => {
@@ -124,6 +111,17 @@ function getSuggestion(puzzles) {
     });
 
     alert(output.filter(Boolean).join('\n---\n').replace(new RegExp(document.querySelector('game-app').solution, 'g'), '* ' + document.querySelector('game-app').solution));
+}
+
+function getRankArr(arr) {
+    let rankArr = new Array(5).fill('').map(() => {return {}; });
+    arr.forEach((word) => {
+        word.split('').forEach((letter, index) => {
+            rankArr[index][letter] ??= 0;
+            rankArr[index][letter] ++;
+        });
+    });
+    return rankArr;
 }
 
 function getWordRank(rankArr, word) {
