@@ -140,11 +140,12 @@ function sortFromMid(arr) {
 }
 
 function clickHandler(event) {
-    let isBackButton = event.path.some((node) => {
-        return node.tagName === 'GAME-ICON' && node.getAttribute('icon') === 'backspace';
+    let isButton = event.path.some((node) => {
+        return node.getAttribute('class') === 'title';
     });
 
-    if (isBackButton && !document.querySelector('game-app').boardState[document.querySelector('game-app').rowIndex]) {
+    if (isButton && !document.querySelector('game-app').boardState[document.querySelector('game-app').rowIndex]) {
+        event.preventDefault();
         getSuggestion(timeTravel.puzzles || window.puzzles);
     }
 }
