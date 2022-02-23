@@ -106,7 +106,7 @@ function getSuggestion(puzzles) {
         .slice(0, 5)
         .join('\n').trim();
 
-    let midStr = sortFromMid(best)
+    let midStr = [... new Set(sortFromMid(best))]
         .slice(0, 2)
         .join('\n').trim();
 
@@ -159,7 +159,7 @@ function sortFromMid(arr) {
 
 function clickHandler(event) {
     let isButton = event.path.some((node) => {
-        return node.getAttribute('class') === 'title';
+        return node && node.getAttribute && node.getAttribute('class') === 'title';
     });
 
     if (isButton && !document.querySelector('game-app').boardState[document.querySelector('game-app').rowIndex]) {
@@ -168,4 +168,6 @@ function clickHandler(event) {
     }
 }
 
+let title = document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelector('.title');
+title.style = 'color: white; text-decoration: none; pointer-events: all;';
 document.body.addEventListener('click', clickHandler);
