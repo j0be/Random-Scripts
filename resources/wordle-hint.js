@@ -24,6 +24,7 @@ function getSuggestion(puzzles) {
     let present = [];
     let presentPositionExclude = new Array(5).fill('.');
     let absent = [];
+    let absentPositionExclude = new Array(5).fill('.');
 
     rows.forEach((row) => {
         let tiles = Array.from(row.shadowRoot.querySelectorAll('game-tile'));
@@ -36,12 +37,15 @@ function getSuggestion(puzzles) {
 
         /* Present tiles */
         let rowPresent = [...new Set(tiles.map((tile, index) => {
-            if (tile.getAttribute('evaluation') === 'present') {
+            let evalulation = tile.getAttribute('evaluation');
+            if (evalulation === 'present' || evalulation === 'absent') {
                 let letter = tile.getAttribute('letter');
-                presentPositionExclude[index] = presentPositionExclude[index].pop ?
-                    presentPositionExclude[index] : [];
-                presentPositionExclude[index].push(letter);
-                return letter;
+                let arr = evalulation === 'present' ? presentPositionExclude : absentPositionExclude;
+                arr[index] = arr[index].pop ?
+                    arr[index] : [];
+                arr[index].push(letter);
+
+                return evalulation === 'present' ? letter : '';
             } else {
                 return '';
             }
@@ -67,7 +71,12 @@ function getSuggestion(puzzles) {
         }
         return item;
     }).join('') + '$', 'i');
-    let absentReg = new RegExp('[' + absent.join('') + ']', 'i');
+    let absentReg = new RegExp('^' + absentPositionExclude.map((item) => {
+        if (item.pop) {
+            return `[^${[...new Set(item.concat(absent))].sort().join('')}]`;
+        }
+        return `[^${absent.join('')}]`;
+    }).join('') + '$', 'i');
 
     let possibilities = puzzles.filter((puzzle) => {
         let isCorrectMatch = !!puzzle.match(correctReg);
@@ -75,7 +84,7 @@ function getSuggestion(puzzles) {
             return puzzle.includes(letter);
         });
         let isPresentPosition = !!puzzle.match(presentReg);
-        let isAbsentMatch = absent.length && !!puzzle.match(absentReg);
+        let isAbsentMatch = !puzzle.match(absentReg);
 
         return isCorrectMatch && isPresentMatch && isPresentPosition && !isAbsentMatch;
     });
