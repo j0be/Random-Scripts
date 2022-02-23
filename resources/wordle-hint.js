@@ -91,7 +91,7 @@ function getSuggestion(puzzles) {
 
     let rankArr = getRankArr(puzzles);
     let possibleRankArr = getRankArr(possibilities);
-    let inclStr = possibilities
+    let best = possibilities
         .sort((a, b) => {
             let aNum = getWordRank(rankArr, a);
             let bNum = getWordRank(rankArr, b);
@@ -101,19 +101,28 @@ function getSuggestion(puzzles) {
             let aNum = getWordRank(possibleRankArr, a);
             let bNum = getWordRank(possibleRankArr, b);
             return aNum > bNum ? -1 : aNum < bNum ? 1 : 0;
-        })
-        .slice(0, 10)
+        });
+    let inclStr = best
+        .slice(0, 5)
         .join('\n').trim();
 
-    let output = [inclStr].map((str, index) => {
+    let midStr = sortFromMid(best)
+        .slice(0, 2)
+        .join('\n').trim();
+
+    let outputArr = best.length > 5 ?
+        [inclStr, midStr] :
+        [inclStr];
+
+    let output = outputArr.map((str, index) => {
         if (index && possibilities.length <= 3) {
             return;
         }
 
         if (str) {
             let map = [
-                `Possible (${possibilities.length})\n  `,
-                `Exclusion Sort\n  `
+                `Common Sort (${possibilities.length})\n  `,
+                `Mid Sort\n  `
             ];
             return map[index] + str.replace(/\n/g, '\n  ');
         }
