@@ -143,9 +143,9 @@ window.timeMachine = {
             window.localStorage.setItem(`gameState_${day}`, JSON.stringify(gameState));
         }
 
-        let loc = (new URL(document.location));
-        loc.searchParams.set('day', day);
-        history.replaceState({}, '', loc);
+        // let loc = (new URL(document.location));
+        // loc.searchParams.set('day', day);
+        // history.replaceState({}, '', loc);
         timeMachine.reset(day);
     },
 
