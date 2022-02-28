@@ -1,8 +1,8 @@
 /* Get available words */
 let jsFile = document.location.origin +
-    document.location.pathname.match(/.*\//)[0] +
-    document.body.querySelector('[src*="main."]').getAttribute('src');
-
+    (document.location.pathname.match(/.*\//)[0] +
+    document.querySelector('[src*="main."]').getAttribute('src')).replace(/\/+/g,'/');
+let isUnlimited = document.location.origin.match(/unlimited/i);
 let timeTravel = window.timeTravel || {};
 if (timeTravel.puzzles || window.puzzles) {
     getSuggestion(timeTravel.puzzles || window.puzzles);
@@ -11,6 +11,13 @@ if (timeTravel.puzzles || window.puzzles) {
         .then(response => response.text())
         .then(result => {
             let puzzles = JSON.parse(result.match(/\[("[a-z]{5}", ?){3}.*?\]/g)?.[0]);
+            if (isUnlimited) {
+                let length = document.querySelector('.RowL').childNodes.length;
+                puzzles = JSON.parse(result.match(/\('(\["\w{1,12}",.*?\])/)?.[1]).filter((word) => {
+                    return word.length === length;
+                });
+            }
+
             if (puzzles && puzzles.length) {
                 window.puzzles = puzzles;
                 getSuggestion(puzzles);
@@ -19,7 +26,10 @@ if (timeTravel.puzzles || window.puzzles) {
 }
 
 function getSuggestion(puzzles) {
-    let rows = document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelectorAll('game-row');
+    let rows = isUnlimited ?
+        document.querySelectorAll('.RowL') :
+        document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelectorAll('game-row');
+
     let correct = new Array(5).fill('.');
     let present = [];
     let presentPositionExclude = new Array(5).fill('.');
@@ -27,25 +37,34 @@ function getSuggestion(puzzles) {
     let absentPositionExclude = new Array(5).fill('.');
 
     rows.forEach((row) => {
-        let tiles = Array.from(row.shadowRoot.querySelectorAll('game-tile'));
+        let tiles = isUnlimited ?
+            Array.from(row.querySelectorAll('.RowL-letter')) :
+            Array.from(row.shadowRoot.querySelectorAll('game-tile'));
         /* Correct tiles */
         tiles.forEach((tile, index) => {
-            if (tile.getAttribute('evaluation') === 'correct') {
-                correct[index] = tile.getAttribute('letter');
+            let isCorrect = tile.getAttribute('evaluation') === 'correct' ||
+                Array.from(tile.classList).includes('letter-correct');
+
+            if (isCorrect) {
+                correct[index] = tile.getAttribute('letter') || tile.innerText.trim();
             }
         });
 
         /* Present tiles */
         let rowPresent = [...new Set(tiles.map((tile, index) => {
             let evalulation = tile.getAttribute('evaluation');
-            if (evalulation === 'present' || evalulation === 'absent') {
-                let letter = tile.getAttribute('letter');
-                let arr = evalulation === 'present' ? presentPositionExclude : absentPositionExclude;
+            let isPresent = evalulation === 'present' ||
+                Array.from(tile.classList).includes('letter-elsewhere');
+            let isAbsent = evalulation === 'absent' ||
+                Array.from(tile.classList).includes('letter-absent');
+            if (isPresent || isAbsent) {
+                let letter = tile.getAttribute('letter') || tile.innerText.trim();
+                let arr = isPresent ? presentPositionExclude : absentPositionExclude;
                 arr[index] = arr[index].pop ?
                     arr[index] : [];
                 arr[index].push(letter);
 
-                return evalulation === 'present' ? letter : '';
+                return isPresent ? letter : '';
             } else {
                 return '';
             }
@@ -54,11 +73,15 @@ function getSuggestion(puzzles) {
 
         /* Absent tiles */
         let rowAbsent = [...new Set(tiles.filter((tile) => {
-            return tile.getAttribute('evaluation') === 'absent' && tiles.filter((innerTile) => {
-                return tile.getAttribute('letter') === innerTile.getAttribute('letter');
+            let isAbsent = tile.getAttribute('evaluation') === 'absent' ||
+                Array.from(tile.classList).includes('letter-absent');
+            return isAbsent && tiles.filter((innerTile) => {
+                let a = tile.getAttribute('letter') || tile.innerText.trim();
+                let b = innerTile.getAttribute('letter') || innerTile.innerText.trim();
+                return a === b;
             }).length === 1;
         }).map((tile) => {
-            return tile.getAttribute('letter');
+            return tile.getAttribute('letter') || tile.innerText.trim();;
         }))];
         absent = [...new Set(absent.concat(rowAbsent))];
     });
@@ -81,7 +104,7 @@ function getSuggestion(puzzles) {
     let possibilities = puzzles.filter((puzzle) => {
         let isCorrectMatch = !!puzzle.match(correctReg);
         let isPresentMatch = present.every((letter) => {
-            return puzzle.includes(letter);
+            return puzzle.includes(letter.toLowerCase());
         });
         let isPresentPosition = !!puzzle.match(presentReg);
         let isAbsentMatch = !puzzle.match(absentReg);
@@ -128,7 +151,8 @@ function getSuggestion(puzzles) {
         }
     });
 
-    alert(output.filter(Boolean).join('\n---\n').replace(new RegExp(document.querySelector('game-app').solution, 'g'), '* ' + document.querySelector('game-app').solution));
+    let solution = isUnlimited ? 'foobar' : document.querySelector('game-app').solution;
+    alert(output.filter(Boolean).join('\n---\n').replace(new RegExp(solution, 'g'), '* ' + solution));
 }
 
 function getRankArr(arr) {
@@ -143,9 +167,17 @@ function getRankArr(arr) {
 }
 
 function getWordRank(rankArr, word) {
-    return word.split('').map((letter, index) => {
-        return rankArr[index][letter] || 0;
+    let slotRank = word.split('').map((letter, index) => {
+        return (rankArr[index][letter] / word.match(new RegExp(letter, 'gi'))?.length) || 0;
     }).reduce((partialSum, curSum) => partialSum + curSum, 0);
+
+    let letterRank = [... new Set(word.split(''))].map((letter) => {
+        return rankArr.reduce((partialSum, rankSlot) => {
+            return (rankSlot[letter] || 0) + partialSum;
+        }, 0);
+    }).reduce((partialSum, curSum) => partialSum + curSum, 0);
+
+    return slotRank + ((letterRank / 5) / 2);
 }
 
 function sortFromMid(arr) {
@@ -158,16 +190,23 @@ function sortFromMid(arr) {
 }
 
 function clickHandler(event) {
-    let isButton = event.path.some((node) => {
-        return node && node.getAttribute && node.getAttribute('class') === 'title';
-    });
+    let isButton = isUnlimited ?
+        event.path.some((node) => {
+            return node.tagName === 'H1';
+        }) :
+        event.path.some((node) => {
+            return node && node.getAttribute && node.getAttribute('class') === 'title';
+        });
 
-    if (isButton && !document.querySelector('game-app').boardState[document.querySelector('game-app').rowIndex]) {
+    if (isButton) {
         event.preventDefault();
         getSuggestion(timeTravel.puzzles || window.puzzles);
     }
 }
 
-let title = document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelector('.title');
+let title = isUnlimited ?
+    document.querySelector('h1') :
+    document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelector('.title');
+
 title.style = 'color: white; text-decoration: none; pointer-events: all;';
 document.body.addEventListener('click', clickHandler);
