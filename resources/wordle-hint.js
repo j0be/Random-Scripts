@@ -3,9 +3,20 @@ let jsFile = document.location.origin +
     (document.location.pathname.match(/.*\//)[0] +
     document.querySelector('[src*="main."]').getAttribute('src')).replace(/\/+/g,'/');
 let isUnlimited = document.location.origin.match(/unlimited/i);
+
+if (!window.puzzles) {
+    let title = isUnlimited ?
+        document.querySelector('h1') :
+        document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelector('.title');
+
+    title.style = 'color: white; text-decoration: none; pointer-events: all;';
+    document.body.addEventListener('click', clickHandler);
+}
+
 let timeTravel = window.timeTravel || {};
 if (timeTravel.puzzles || window.puzzles) {
-    getSuggestion(timeTravel.puzzles || window.puzzles);
+    window.puzzles = window.puzzles || timeTravel.puzzles;
+    getSuggestion(window.puzzles);
 } else {
     fetch(jsFile)
         .then(response => response.text())
@@ -52,10 +63,10 @@ function getSuggestion(puzzles) {
 
         /* Present tiles */
         let rowPresent = [...new Set(tiles.map((tile, index) => {
-            let evalulation = tile.getAttribute('evaluation');
-            let isPresent = evalulation === 'present' ||
+            let evaluation = tile.getAttribute('evaluation');
+            let isPresent = evaluation === 'present' ||
                 Array.from(tile.classList).includes('letter-elsewhere');
-            let isAbsent = evalulation === 'absent' ||
+            let isAbsent = evaluation === 'absent' ||
                 Array.from(tile.classList).includes('letter-absent');
             if (isPresent || isAbsent) {
                 let letter = tile.getAttribute('letter') || tile.innerText.trim();
@@ -101,7 +112,7 @@ function getSuggestion(puzzles) {
         return `[^${absent.join('')}]`;
     }).join('') + '$', 'i');
 
-    let possibilities = puzzles.filter((puzzle) => {
+    function isPossible(puzzle) {
         let isCorrectMatch = !!puzzle.match(correctReg);
         let isPresentMatch = present.every((letter) => {
             return puzzle.includes(letter.toLowerCase());
@@ -110,57 +121,61 @@ function getSuggestion(puzzles) {
         let isAbsentMatch = !puzzle.match(absentReg);
 
         return isCorrectMatch && isPresentMatch && isPresentPosition && !isAbsentMatch;
-    });
+    }
+
+    /**** START ARRAY BUILDING */
+    let possibilities = puzzles.filter((puzzle) => isPossible(puzzle));
+    let eliminationLetters = getEliminationLetters();
 
     let rankArr = getRankArr(puzzles);
     let possibleRankArr = getRankArr(possibilities);
-    let best = possibilities
-        .sort((a, b) => {
-            let aNum = getWordRank(rankArr, a);
-            let bNum = getWordRank(rankArr, b);
-            return aNum > bNum ? -1 : aNum < bNum ? 1 : 0;
-        })
-        .sort((a, b) => {
-            let aNum = getWordRank(possibleRankArr, a);
-            let bNum = getWordRank(possibleRankArr, b);
-            return aNum > bNum ? -1 : aNum < bNum ? 1 : 0;
-        });
-    let inclStr = best
-        .slice(0, 5)
-        .join('\n').trim();
+    let eliminationRankArr = getRankArr(puzzles, eliminationLetters);
+    let possibleEliminationRankArr = getRankArr(possibilities, eliminationLetters);
 
-    let midStr = [... new Set(sortFromMid(best))]
-        .slice(0, 2)
-        .join('\n').trim();
+    let puzzleMapping = puzzles.map((word) => { return {
+        name: word,
+        isPossible: isPossible(word),
+        puzzleRank: getWordRank(rankArr, word),
+        possibleRank: getWordRank(possibleRankArr, word),
+        eliminationRank: getWordRank(eliminationRankArr, word),
+        possibleEliminationRank: getWordRank(possibleEliminationRankArr, word)
+    }});
 
-    let outputArr = best.length > 5 ?
-        [inclStr, midStr] :
-        [inclStr];
+    let best = puzzleMapping.slice()
+        .filter((puzzle) => puzzle.isPossible)
+        .sort((a, b) => String(b.puzzleRank).localeCompare(a.puzzleRank, 'en', { numeric: true }))
+        .sort((a, b) => String(b.possibleRank).localeCompare(a.possibleRank, 'en', { numeric: true }))
+        .sort((a, b) => String(b.possibleEliminationRank).localeCompare(a.possibleEliminationRank, 'en', { numeric: true }))
+        .sort((a, b) => String([... new Set(b.name.split(''))].length).localeCompare([... new Set(a.name.split(''))].length, 'en', { numeric: true }));
 
-    let output = outputArr.map((str, index) => {
-        if (index && possibilities.length <= 3) {
-            return;
-        }
+    let elimination = best.slice()
+        .sort((a, b) => String(b.eliminationRank).localeCompare(a.eliminationRank, 'en', { numeric: true }));
 
-        if (str) {
-            let map = [
-                `Common Sort (${possibilities.length})\n  `,
-                `Mid Sort\n  `
-            ];
-            return map[index] + str.replace(/\n/g, '\n  ');
-        }
-    });
+    let outputs = [
+        [`Possibilities (${possibilities.length})`]
+            .concat(best.slice(0, 5).map((puzzle) => { return `  ${puzzle.name}`; }))
+            .join('\n')
+            .trim(),
+        [`Elimination`]
+            .concat(elimination.slice(0, 2).map((puzzle) => { return `  ${puzzle.name}`; }))
+            .join('\n')
+            .trim()
+    ];
 
+    let output = outputs.filter(Boolean).join('\n---\n');
     let solution = isUnlimited ? 'foobar' : document.querySelector('game-app').solution;
-    alert(output.filter(Boolean).join('\n---\n').replace(new RegExp(solution, 'g'), '* ' + solution));
+
+    alert(output.replace(new RegExp(solution, 'g'), '* ' + solution));
 }
 
-function getRankArr(arr) {
+function getRankArr(arr, filterArray) {
     let rankArr = new Array(5).fill('').map(() => {return {}; });
     arr.forEach((word) => {
         word.split('').forEach((letter, index) => {
-            rankArr[index][letter] ??= 0;
-            rankArr[index][letter] ++;
+            if (!filterArray || filterArray.includes(letter)) {
+                rankArr[index][letter] ??= 0;
+                rankArr[index][letter] ++;
+            }
         });
     });
     return rankArr;
@@ -178,6 +193,13 @@ function getWordRank(rankArr, word) {
     }).reduce((partialSum, curSum) => partialSum + curSum, 0);
 
     return slotRank + ((letterRank / 5) / 2);
+}
+
+function getEliminationLetters() {
+    return isUnlimited ?
+        Array.from(document.querySelectorAll(`.Game-keyboard-button:not(.Game-keyboard-button-wide, .letter-elsewhere, .letter-correct, .letter-absent)`))
+            .map((node) => node.innerText.trim().toLowerCase()) :
+        [];
 }
 
 function sortFromMid(arr) {
@@ -203,10 +225,3 @@ function clickHandler(event) {
         getSuggestion(timeTravel.puzzles || window.puzzles);
     }
 }
-
-let title = isUnlimited ?
-    document.querySelector('h1') :
-    document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelector('.title');
-
-title.style = 'color: white; text-decoration: none; pointer-events: all;';
-document.body.addEventListener('click', clickHandler);
