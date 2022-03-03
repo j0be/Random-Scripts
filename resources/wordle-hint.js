@@ -193,11 +193,8 @@ function getSuggestion(puzzles) {
     }
 
     let output = outputs.filter(Boolean).join('\n---\n');
-    let solution = isUnlimited ? 'foobar' : document.querySelector('game-app').solution;
-
-    console.log(window.puzzles);
-
-    alert(output.replace(new RegExp(solution, 'g'), '* ' + solution));
+    console.log(output);
+    alert(output);
 }
 
 function getRankArr(arr, filterArray) {
