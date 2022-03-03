@@ -14,8 +14,11 @@ if (!window.puzzles) {
 }
 
 let timeTravel = window.timeTravel || {};
-if (timeTravel.puzzles || window.puzzles) {
-    window.puzzles = window.puzzles || timeTravel.puzzles;
+if (timeTravel.puzzles) {
+    window.puzzles = mapPuzzles(puzzles);
+}
+
+if (window.puzzles) {
     getSuggestion(window.puzzles);
 } else {
     fetch(jsFile)
@@ -30,10 +33,18 @@ if (timeTravel.puzzles || window.puzzles) {
             }
 
             if (puzzles && puzzles.length) {
-                window.puzzles = puzzles;
-                getSuggestion(puzzles);
+                window.puzzles = mapPuzzles(puzzles);
+                getSuggestion(window.puzzles);
             }
         });
+}
+
+function mapPuzzles(puzzles) {
+    return puzzles.map((word) => {
+        return {
+            name: word
+        }
+    });
 }
 
 function getSuggestion(puzzles) {
@@ -124,54 +135,75 @@ function getSuggestion(puzzles) {
     }
 
     /**** START ARRAY BUILDING */
-    let possibilities = puzzles.filter((puzzle) => isPossible(puzzle));
-    let eliminationLetters = getEliminationLetters();
+    let magicNum = 200;
+    let possibilities = puzzles.filter((puzzle) => isPossible(puzzle.name));
 
     let rankArr = getRankArr(puzzles);
     let possibleRankArr = getRankArr(possibilities);
-    let eliminationRankArr = getRankArr(puzzles, eliminationLetters);
-    let possibleEliminationRankArr = getRankArr(possibilities, eliminationLetters);
 
-    let puzzleMapping = puzzles.map((word) => { return {
-        name: word,
-        isPossible: isPossible(word),
-        puzzleRank: getWordRank(rankArr, word),
-        possibleRank: getWordRank(possibleRankArr, word),
-        eliminationRank: getWordRank(eliminationRankArr, word),
-        possibleEliminationRank: getWordRank(possibleEliminationRankArr, word)
-    }});
+    let eliminationLetters = [];
+    let eliminationRankArr = [];
+    let possibleEliminationRankArr = [];
 
-    let best = puzzleMapping.slice()
-        .filter((puzzle) => puzzle.isPossible)
-        .sort((a, b) => String(b.puzzleRank).localeCompare(a.puzzleRank, 'en', { numeric: true }))
-        .sort((a, b) => String(b.possibleRank).localeCompare(a.possibleRank, 'en', { numeric: true }))
-        .sort((a, b) => String(b.possibleEliminationRank).localeCompare(a.possibleEliminationRank, 'en', { numeric: true }))
-        .sort((a, b) => String([... new Set(b.name.split(''))].length).localeCompare([... new Set(a.name.split(''))].length, 'en', { numeric: true }));
+    if (possibilities.length < magicNum && possibilities.length > 2) {
+        eliminationLetters = getEliminationLetters(possibilities, present, correct);
+        eliminationRankArr = getRankArr(puzzles, eliminationLetters);
+        possibleEliminationRankArr = getRankArr(possibilities, eliminationLetters);
+    }
 
-    let elimination = best.slice()
-        .sort((a, b) => String(b.eliminationRank).localeCompare(a.eliminationRank, 'en', { numeric: true }));
+    window.puzzles.forEach((puzzle) => {
+        let thisIsPossible = isPossible(puzzle.name);
+        Object.assign(puzzle, {
+            isPossible: thisIsPossible,
+            puzzleRank: getWordRank(rankArr, puzzle.name),
+            possibleRank: thisIsPossible && getWordRank(possibleRankArr, puzzle.name),
+            eliminationRank: !thisIsPossible && getWordRank(eliminationRankArr, puzzle.name),
+            possibleEliminationRank: thisIsPossible && getWordRank(possibleEliminationRankArr, puzzle.name)
+        });
+    });
+
+    window.puzzles
+        .sort((a, b) => {
+            return String([... new Set(b.name.split(''))].length).localeCompare([... new Set(a.name.split(''))].length, 'en', { numeric: true }) ||
+                String(b.possibleEliminationRank).localeCompare(a.possibleEliminationRank, 'en', { numeric: true }) ||
+                String(b.possibleRank).localeCompare(a.possibleRank, 'en', { numeric: true }) ||
+                String(b.eliminationRank).localeCompare(a.eliminationRank, 'en', { numeric: true }) ||
+                String(b.puzzleRank).localeCompare(a.puzzleRank, 'en', { numeric: true });
+        });
+
+    let best = window.puzzles.slice()
+        .filter((puzzle) => puzzle.isPossible);
 
     let outputs = [
         [`Possibilities (${possibilities.length})`]
             .concat(best.slice(0, 5).map((puzzle) => { return `  ${puzzle.name}`; }))
             .join('\n')
             .trim(),
-        [`Elimination`]
-            .concat(elimination.slice(0, 2).map((puzzle) => { return `  ${puzzle.name}`; }))
+    ];
+
+    let isSame = window.puzzles.slice(0,2).map((puzzle) => puzzle.name).join('') ===
+        best.slice(0,2).map((puzzle) => puzzle.name).join('');
+
+    if (!isSame && best.length > 2 && possibilities.length < magicNum) {
+        outputs.push([`Elimination`]
+            .concat(window.puzzles.slice(0, 2).map((puzzle) => { return `  ${puzzle.name}`; }))
             .join('\n')
             .trim()
-    ];
+        );
+    }
 
     let output = outputs.filter(Boolean).join('\n---\n');
     let solution = isUnlimited ? 'foobar' : document.querySelector('game-app').solution;
+
+    console.log(window.puzzles);
 
     alert(output.replace(new RegExp(solution, 'g'), '* ' + solution));
 }
 
 function getRankArr(arr, filterArray) {
     let rankArr = new Array(5).fill('').map(() => {return {}; });
-    arr.forEach((word) => {
-        word.split('').forEach((letter, index) => {
+    arr.forEach((puzzle) => {
+        puzzle.name.split('').forEach((letter, index) => {
             if (!filterArray || filterArray.includes(letter)) {
                 rankArr[index][letter] ??= 0;
                 rankArr[index][letter] ++;
@@ -182,6 +214,10 @@ function getRankArr(arr, filterArray) {
 }
 
 function getWordRank(rankArr, word) {
+    if (!rankArr || !rankArr.length) {
+        return 0;
+    }
+
     let slotRank = word.split('').map((letter, index) => {
         return (rankArr[index][letter] / word.match(new RegExp(letter, 'gi'))?.length) || 0;
     }).reduce((partialSum, curSum) => partialSum + curSum, 0);
@@ -195,11 +231,18 @@ function getWordRank(rankArr, word) {
     return slotRank + ((letterRank / 5) / 2);
 }
 
-function getEliminationLetters() {
-    return isUnlimited ?
-        Array.from(document.querySelectorAll(`.Game-keyboard-button:not(.Game-keyboard-button-wide, .letter-elsewhere, .letter-correct, .letter-absent)`))
-            .map((node) => node.innerText.trim().toLowerCase()) :
-        [];
+function getEliminationLetters(possibilities, present, correct) {
+    let possibleLetters = [... new Set(possibilities
+        .map((puzzle) => puzzle.name.toLowerCase().split(''))
+        .flat())];
+    let presentLetters = present.concat(correct)
+        .filter((letter) => { return letter !== '.'; });
+
+    [... new Set(presentLetters)].forEach((letter) => {
+        possibleLetters.splice(possibleLetters.indexOf(letter.toLowerCase()), 1);
+    });
+
+    return possibleLetters;
 }
 
 function sortFromMid(arr) {
