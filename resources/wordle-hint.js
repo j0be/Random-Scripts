@@ -48,15 +48,16 @@ function mapPuzzles(puzzles) {
 }
 
 function getSuggestion(puzzles) {
+    let length = isUnlimited ? document.querySelector('.RowL').childNodes.length : 5;
     let rows = isUnlimited ?
         document.querySelectorAll('.RowL') :
         document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelectorAll('game-row');
 
-    let correct = new Array(5).fill('.');
+    let correct = new Array(length).fill('.');
     let present = [];
-    let presentPositionExclude = new Array(5).fill('.');
+    let presentPositionExclude = new Array(length).fill('.');
     let absent = [];
-    let absentPositionExclude = new Array(5).fill('.');
+    let absentPositionExclude = new Array(length).fill('.');
 
     rows.forEach((row) => {
         let tiles = isUnlimited ?
@@ -137,6 +138,7 @@ function getSuggestion(puzzles) {
     /**** START ARRAY BUILDING */
     let magicNum = 200;
     let possibilities = puzzles.filter((puzzle) => isPossible(puzzle.name));
+    let showElimination = (possibilities.length > 2 && possibilities.length < magicNum);
 
     let rankArr = getRankArr(puzzles);
     let possibleRankArr = getRankArr(possibilities);
@@ -145,13 +147,15 @@ function getSuggestion(puzzles) {
     let eliminationRankArr = [];
     let possibleEliminationRankArr = [];
 
-    if (possibilities.length < magicNum && possibilities.length > 2) {
+    if (showElimination) {
         eliminationLetters = getEliminationLetters(possibilities, present, correct);
         eliminationRankArr = getRankArr(puzzles, eliminationLetters);
         possibleEliminationRankArr = getRankArr(possibilities, eliminationLetters);
     }
 
-    window.puzzles.forEach((puzzle) => {
+    let tempPuzzles = (showElimination ? window.puzzles : possibilities);
+
+    tempPuzzles.forEach((puzzle) => {
         let thisIsPossible = isPossible(puzzle.name);
         Object.assign(puzzle, {
             isPossible: thisIsPossible,
@@ -162,7 +166,7 @@ function getSuggestion(puzzles) {
         });
     });
 
-    window.puzzles
+    tempPuzzles
         .sort((a, b) => {
             return String([... new Set(b.name.split(''))].length).localeCompare([... new Set(a.name.split(''))].length, 'en', { numeric: true }) ||
                 String(b.possibleEliminationRank).localeCompare(a.possibleEliminationRank, 'en', { numeric: true }) ||
@@ -171,7 +175,7 @@ function getSuggestion(puzzles) {
                 String(b.puzzleRank).localeCompare(a.puzzleRank, 'en', { numeric: true });
         });
 
-    let best = window.puzzles.slice()
+    let best = tempPuzzles.slice()
         .filter((puzzle) => puzzle.isPossible);
 
     let outputs = [
@@ -198,7 +202,8 @@ function getSuggestion(puzzles) {
 }
 
 function getRankArr(arr, filterArray) {
-    let rankArr = new Array(5).fill('').map(() => {return {}; });
+    let length = isUnlimited ? document.querySelector('.RowL').childNodes.length : 5;
+    let rankArr = new Array(length).fill('').map(() => {return {}; });
     arr.forEach((puzzle) => {
         puzzle.name.split('').forEach((letter, index) => {
             if (!filterArray || filterArray.includes(letter)) {
@@ -262,6 +267,10 @@ function clickHandler(event) {
 
     if (isButton) {
         event.preventDefault();
-        getSuggestion(timeTravel.puzzles || window.puzzles);
+        event.path[0].style = "opacity: .5;";
+        setTimeout(() => {
+            getSuggestion(timeTravel.puzzles || window.puzzles);
+            event.path[0].style = "opacity: 1;";
+        }, 0);
     }
 }
