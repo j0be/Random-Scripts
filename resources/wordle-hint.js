@@ -10,7 +10,7 @@ if (!window.puzzles) {
         document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelector('.title') :
         document.querySelector('h1');
 
-    title.style = 'color: white; text-decoration: none; pointer-events: all;';
+    title.style = `color: ${window.getComputedStyle(document.body).backgroundColor}; filter: invert(1); text-decoration: none; pointer-events: all; cursor: pointer;`;
     document.body.addEventListener('click', clickHandler);
 }
 
@@ -29,7 +29,7 @@ function clickHandler(event) {
         setTimeout(() => {
             getSuggestion(timeTravel.puzzles || window.puzzles);
             event.path[0].style = "opacity: 1;";
-        }, 0);
+        }, 100);
     }
 }
 
@@ -124,11 +124,21 @@ function getSuggestion(puzzles) {
             let isAbsent = tile.getAttribute('evaluation') === 'absent' ||
                 Array.from(tile.classList).includes('letter-absent') ||
                 Array.from(tile.classList).includes('excluded');
-            return isAbsent && tiles.filter((innerTile) => {
+
+            return isAbsent && tiles.every((innerTile) => {
+                if (tile === innerTile) { return true; }
+
                 let a = tile.getAttribute('letter') || tile.innerText.trim();
                 let b = innerTile.getAttribute('letter') || innerTile.innerText.trim();
-                return a === b;
-            }).length === 1;
+
+                if (a !== b) { return true; }
+
+                let innerAbsent = innerTile.getAttribute('evaluation') === 'absent' ||
+                    Array.from(innerTile.classList).includes('letter-absent') ||
+                    Array.from(innerTile.classList).includes('excluded');
+
+                return innerAbsent;
+            });
         }).map((tile) => {
             return tile.getAttribute('letter') || tile.innerText.trim();;
         }))];
@@ -143,12 +153,13 @@ function getSuggestion(puzzles) {
         }
         return item;
     }).join('') + '$', 'i');
-    let absentReg = new RegExp('^' + absentPositionExclude.map((item) => {
+    let absentTileReg = new RegExp('^' + absentPositionExclude.map((item) => {
         if (item.pop) {
             return `[^${[...new Set(item.concat(absent))].sort().join('')}]`;
         }
         return `[^${absent.join('')}]`;
     }).join('') + '$', 'i');
+    let absentReg = new RegExp(`[${absent.join('')}]`, 'i');
 
     function isPossible(puzzle) {
         let isCorrectMatch = !!puzzle.match(correctReg);
@@ -156,9 +167,10 @@ function getSuggestion(puzzles) {
             return puzzle.toLowerCase().includes(letter.toLowerCase());
         });
         let isPresentPosition = !!puzzle.match(presentReg);
-        let isAbsentMatch = !puzzle.match(absentReg);
+        let isAbsentTileMatch = !puzzle.match(absentTileReg);
+        let isAbsentMatch = absent.length && puzzle.match(absentReg);
 
-        return isCorrectMatch && isPresentMatch && isPresentPosition && !isAbsentMatch;
+        return isCorrectMatch && isPresentMatch && isPresentPosition && !isAbsentTileMatch && !isAbsentMatch;
     }
 
     /**** START ARRAY BUILDING */
@@ -208,17 +220,19 @@ function getSuggestion(puzzles) {
         best.reverse();
     }
 
+    let isSame = window.puzzles.slice(0,2).map((puzzle) => puzzle.name).join('') ===
+        best.slice(0,2).map((puzzle) => puzzle.name).join('');
+    let hasElimination = !isSame && best.length > 2 && showElimination;
+
     let outputs = [
         [`Possibilities (${possibilities.length})`]
-            .concat(best.slice(0, 5).map((puzzle) => { return `  ${puzzle.name}`; }))
+            .concat(best.slice(0, hasElimination ? 5 : 10).map((puzzle) => { return `  ${puzzle.name}`; }))
             .join('\n')
             .trim(),
     ];
 
-    let isSame = window.puzzles.slice(0,2).map((puzzle) => puzzle.name).join('') ===
-        best.slice(0,2).map((puzzle) => puzzle.name).join('');
 
-    if (!isSame && best.length > 2 && showElimination) {
+    if (hasElimination) {
         outputs.push([`Elimination`]
             .concat(window.puzzles.slice(0, 2).map((puzzle) => { return `  ${puzzle.name}`; }))
             .join('\n')
