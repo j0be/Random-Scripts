@@ -3,6 +3,7 @@ javascript: (function () {
     window.fdata = {
         requests: {},
         stream: {
+            title: document.querySelector('.entry .title a').textContent,
             threadId: document.location.href.split('/')[6],
             users: {},
             moreLinks: [],
@@ -44,6 +45,10 @@ javascript: (function () {
             init: function () {
                 flair.setup.initCSS();
                 flair.get.allComments();
+                
+                fdata.stream.title = fdata.stream.title.match(/Round \d+/) ?
+                    fdata.stream.title.match(/Round (\d+)/)[1] :
+                    fdata.stream.threadId;
             },
             initCSS: function () {
                 var css = '#flair-output { color: #000; position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 999; overflow: visible; } ';
@@ -136,10 +141,13 @@ javascript: (function () {
 
                     flair.output.title('Setting flair for ' + user.name);
 
+                    var flair_classes = [fdata.stream.title];
+                    if (fdata.stream.userArr[0].name === user.name) { flair_classes.push('monthlywinner'); }
+
                     var data = {
                         name: user.name,
                         text: reply.text,
-                        css_class: fdata.stream.userArr[0].name === user.name ? 'monthlywinner' : '',
+                        css_class: flair_classes.join(' '),
                         id: '#flair-xxxxx',
                         r: r.config.cur_listing,
                         uh: fdata.stream.modhash,
