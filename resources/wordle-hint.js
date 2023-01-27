@@ -38,19 +38,45 @@ window.hinter = {
   },
 
   init: () => {
-    return hinter.words.get()
-      .then((dict) => { console.log(`Dictionary with ${dict && dict.length} words obtained.`); return dict; })
-      .then((dict) => {
-        let rows = hinter.state.get();
-        hinter.words.hint(dict, rows);
-      })
-      .catch(err => {
-        debugger;
-        console.error('General Stack Error', err);
-        alert(`General Stack Error:\n${err.toString()}`);
-      });
+    return Promise.all([
+      hinter.words.get(),
+      hinter.solution.get()
+    ]).then(([dict, solution]) => {
+      let rows = hinter.state.get();
+      hinter.words.hint(dict, rows);
+    })
+    .catch(err => {
+      debugger;
+      console.error('General Stack Error', err);
+      alert(`General Stack Error:\n${err.toString()}`);
+    });
   },
 
+  solution: {
+    get: () => {
+      if (hinter.state.solution) {
+        return Promise.resolve(hinter.state.solution);
+      }
+
+      let solutionMapper = {
+        default: () => Promise.reject('fail'),
+        wordle: () => {
+          return fetch(`/svc/wordle/v2/${new Date().toLocaleDateString('en-CA')}.json`)
+            .then(response => response.json())
+            .then(jsonData => {
+                hinter.state.solution = jsonData?.solution;
+                return jsonData?.solution;
+            })
+        }
+      };
+
+      return (solutionMapper[hinter.state.game] || solutionMapper.default)()
+        .then(word => {
+          console.log(`Solution was found: ${word}`);
+          return word;
+        });
+    }
+  },
   words: {
     get: () => {
       if (hinter.state.dict) {
@@ -74,7 +100,11 @@ window.hinter = {
         }
       };
 
-      return (dictMapper[hinter.state.game] || dictMapper.default)();
+      return (dictMapper[hinter.state.game] || dictMapper.default)()
+        .then(dict => {
+          console.log(`Dictionary with ${dict && dict.length} words obtained.`);
+          return dict;
+        });
     },
     hint: (dict, rows) => {
       const {possibilities, exactArr} = hinter.words.possible(dict, rows);
@@ -88,7 +118,7 @@ window.hinter = {
       alert(output.map(item => {
         return typeof item === 'string'
           ? item
-          : item.slice(0,10).map(word => `${word.possibleScore}: ${word.word}`).join('\n') + '\n';
+          : item.slice(0,10).map(word => `${word.weightedScore}: ${word.word}`).join('\n') + '\n';
       }).join('\n').trim());
     },
     possible: (dict, rows) => {
@@ -121,8 +151,8 @@ window.hinter = {
         return output;
       })({});
 
-      let exactReg = new RegExp(`^${exactArr.map(letter => letter || '\w').join('')}$`, 'i');
-      let excludeReg = new RegExp(`^${excludeArr.map(letter => `[^${letter}]` || '\w').join('')}$`, 'i');
+      let exactReg = new RegExp(`^${exactArr.map(letter => letter || '\\w').join('')}$`, 'i');
+      let excludeReg = new RegExp(`^${excludeArr.map(letter => letter ? `[^${letter}]` : '\\w').join('')}$`, 'i');
       return {
         possibilities: dict
           .filter(word => word.match(exactReg))
@@ -137,9 +167,9 @@ window.hinter = {
     },
     sort: {
       common: (dict, possibilities, exactArr) => {
-        const [allDistribution, possibleDistribution] = [dict, possibilities]
+        const [possibleDistribution, allDistribution] = [possibilities, dict]
           .map(words => {
-            return Array(words[0].length)
+            return words.length && Array(words[0].length)
               .fill('').map(() => { return {}; })
               .map((slot, i) => {
                 possibilities.forEach(possibility => {
@@ -149,28 +179,41 @@ window.hinter = {
               });
           });
 
+        const weightedDistribution = JSON.parse(JSON.stringify(possibleDistribution)).map((column, i) => {
+          let letter = hinter.state.solution[i];
+          return {
+            ...column,
+            [letter]: column[letter]
+              * hinter.state.solution.match(new RegExp(letter, 'g')).length
+              * 1.1
+          };
+        });
+
         let score = (distribution, word) => {
-          return word.split('').reduce((accumulator, letter, i) => {
-            let distributionScore = (distribution[i][letter] ?? 0);
+          return Number((word.split('').reduce((accumulator, letter, i) => {
+            let distributionScore = (distribution?.[i]?.[letter] ?? 0);
             let letterCount = word.match(new RegExp(letter,'g')).length;
+
             return accumulator +
               (letter === exactArr[i]
                 ? 0
                 : (distributionScore / letterCount)
               );
-          }, 0)
+          }, 0)).toPrecision(2));
         };
 
         return possibilities
           .map(word => {
             return {
               word,
+              weightedScore: score(weightedDistribution, word),
               possibleScore: score(possibleDistribution, word),
-              allScore: score(allDistribution, word)
+              // allScore: score(allDistribution, word)
             };
           })
-          .sort((a, b) => String(b.allScore).localeCompare(String(a.allScore), 'en', { numeric: true }))
-          .sort((a, b) => String(b.possibleScore).localeCompare(String(a.possibleScore), 'en', { numeric: true }));
+          // .sort((a, b) => String(b.allScore).localeCompare(String(a.allScore), 'en', { numeric: true }))
+          .sort((a, b) => String(b.possibleScore).localeCompare(String(a.possibleScore), 'en', { numeric: true }))
+          .sort((a, b) => String(b.weightedScore).localeCompare(String(a.weightedScore), 'en', { numeric: true }))
       }
     }
   },
@@ -256,4 +299,3 @@ window.hinter = {
 
 
 hinter.init();
-debugger;
