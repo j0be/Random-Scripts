@@ -78,13 +78,18 @@ window.hinter = {
     },
     hint: (dict, rows) => {
       const {possibilities, exactArr} = hinter.words.possible(dict, rows);
-      let commonSort = hinter.words.sort.common(possibilities, exactArr);
-
-      let limit = 10;
-      alert([
+      let commonSort = hinter.words.sort.common(dict, possibilities, exactArr);
+      let output = [
         `Possibilities: ${possibilities.length}`,
-        commonSort.slice(0, limit).map(word => `${word.score}: ${word.word}`).join('\n')
-      ].join('\n'));
+        commonSort
+      ];
+      console.log(output);
+
+      alert(output.map(item => {
+        return typeof item === 'string'
+          ? item
+          : item.slice(0,10).map(word => `${word.possibleScore}: ${word.word}`).join('\n') + '\n';
+      }).join('\n').trim());
     },
     possible: (dict, rows) => {
       let wordLength = rows[0].tiles.length;
@@ -131,31 +136,42 @@ window.hinter = {
       };
     },
     sort: {
-      common: (possibilities, exactArr) => {
-        let distribution = Array(possibilities[0].length)
-          .fill('').map(() => ({}))
-          .map((slot, i) => {
-            possibilities.forEach(possibility => {
-              slot[possibility[i]] = (slot[possibility[i]] ?? 0) + 1;
-            })
-            return slot;
+      common: (dict, possibilities, exactArr) => {
+        const [allDistribution, possibleDistribution] = [dict, possibilities]
+          .map(words => {
+            return Array(words[0].length)
+              .fill('').map(() => { return {}; })
+              .map((slot, i) => {
+                possibilities.forEach(possibility => {
+                  slot[possibility[i]] = (slot[possibility[i]] ?? 0) + 1;
+                })
+                return slot;
+              });
           });
+
+        let score = (distribution, word) => {
+          return word.split('').reduce((accumulator, letter, i) => {
+            let distributionScore = (distribution[i][letter] ?? 0);
+            let letterCount = word.match(new RegExp(letter,'g')).length;
+            return accumulator +
+              (letter === exactArr[i]
+                ? 0
+                : (distributionScore / letterCount)
+              );
+          }, 0)
+        };
 
         return possibilities
           .map(word => {
             return {
               word,
-              score: word.split('').reduce((accumulator, letter, i) => {
-                let distributionScore = (distribution[i][letter] ?? 0);
-                let letterCount = word.match(new RegExp(letter,'g')).length;
-                return accumulator +
-                  letter === exactArr[i]
-                  ? 0
-                  : (distributionScore / letterCount);
-              }, 0)
+              possibleScore: score(possibleDistribution, word),
+              allScore: score(allDistribution, word)
             };
           })
-          .sort((a, b) => String(b.score).localeCompare(String(a.score), 'en', { numeric: true }));      }
+          .sort((a, b) => String(b.allScore).localeCompare(String(a.allScore), 'en', { numeric: true }))
+          .sort((a, b) => String(b.possibleScore).localeCompare(String(a.possibleScore), 'en', { numeric: true }));
+      }
     }
   },
 
@@ -238,4 +254,6 @@ window.hinter = {
   },
 };
 
+
 hinter.init();
+debugger;
