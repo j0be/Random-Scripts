@@ -1,301 +1,241 @@
-/* Get available words */
-let jsFile = document.location.origin +
-    (document.location.pathname.match(/.*\//)[0] +
-    document.querySelector('[src*="main."]').getAttribute('src')).replace(/\/+/g,'/');
-let isUnlimited = document.location.origin.match(/unlimited/i);
-let isAnti = document.location.origin.match(/anti/i);
+window.hinter = {
+  state: {
+    ...window.hinter?.state,
+    game: 'wordle',
+    get: () => {
+      let domMapper = hinter.tiles.getDom();
+      return domMapper.map(row => ({
+        ...row,
+        ...(() => {
+          let statusId = hinter.rows.status(row);
+          return {
+            statusId,
+            status: hinter.constants.states.row[statusId],
+          };
+        })(),
+        tiles: row.tiles.map(tile => {
+          return {
+            ...tile,
+            ...(() => {
+              let statusId = hinter.tiles.status(tile);
+              return {
+                statusId,
+                status: hinter.constants.states.tile[hinter.tiles.status(tile)],
+              };
+            })(),
+            letter: hinter.tiles.letter(tile).toLowerCase(),
+          };
+        })
+      }));
+    },
+  },
 
-if (!window.puzzles) {
-    let title = document.querySelector('game-app') ?
-        document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelector('.title') :
-        document.querySelector('h1');
-
-    title.style = `color: ${window.getComputedStyle(document.body).backgroundColor}; filter: invert(1); text-decoration: none; pointer-events: all; cursor: pointer;`;
-    document.body.addEventListener('click', clickHandler);
-}
-
-function clickHandler(event) {
-    let isButton = isUnlimited ?
-        event.path.some((node) => {
-            return node.tagName === 'H1';
-        }) :
-        event.path.some((node) => {
-            return node && node.getAttribute && node.getAttribute('class') === 'title';
-        });
-
-    if (isButton) {
-        event.preventDefault();
-        event.path[0].style = "opacity: .5;";
-        setTimeout(() => {
-            getSuggestion(timeTravel.puzzles || window.puzzles);
-            event.path[0].style = "opacity: 1;";
-        }, 100);
+  constants: {
+    states: {
+      tile: ['empty', 'tbd', 'absent', 'present', 'correct'],
+      row: ['empty', 'pending', 'played']
     }
-}
+  },
 
-let timeTravel = window.timeTravel || {};
-if (timeTravel.puzzles) {
-    window.puzzles = mapPuzzles(puzzles);
-}
+  init: () => {
+    return hinter.words.get()
+      .then((dict) => { console.log(`Dictionary with ${dict && dict.length} words obtained.`); return dict; })
+      .then((dict) => {
+        let rows = hinter.state.get();
+        hinter.words.hint(dict, rows);
+      })
+      .catch(err => {
+        debugger;
+        console.error('General Stack Error', err);
+        alert(`General Stack Error:\n${err.toString()}`);
+      });
+  },
 
-if (window.puzzles) {
-    getSuggestion(window.puzzles);
-} else {
-    fetch(jsFile)
-        .then(response => response.text())
-        .then(result => {
-            // let index = document.querySelector('game-app') ? 0 : 1;
-            let puzzles = JSON.parse(result.match(/\[("[a-zA-Z]{5}", ?){3}.*?\]/g)?.[0]);
-            if (isUnlimited) {
-                let length = document.querySelector('.RowL').childNodes.length;
-                puzzles = JSON.parse(result.match(/\('(\["\w{1,12}",.*?\])/)?.[1]).filter((word) => {
-                    return word.length === length;
+  words: {
+    get: () => {
+      if (hinter.state.dict) {
+        return Promise.resolve(hinter.state.dict);
+      }
+
+      let dictMapper = {
+        default: () => Promise.reject('fail'),
+        wordle: () => {
+          return fetch('./index.html')
+            .then(response => response.text())
+            .then(htmlData => {
+              let sourceFile = htmlData.match(/wordle\.[\w\d]+\.js/i)?.[0];
+              return fetch(`../../games-assets/v2/${sourceFile}`)
+                .then(response => response.text())
+                .then(jsData => {
+                  hinter.state.dict = JSON.parse(jsData.match(/SET_INITIAL_STATE.*?(\[.*?\])/i)[1]);
+                  return hinter.state.dict;
                 });
-            }
-
-            if (puzzles && puzzles.length) {
-                window.puzzles = mapPuzzles(puzzles);
-                getSuggestion(window.puzzles);
-            }
-        });
-}
-
-function mapPuzzles(puzzles) {
-    return puzzles.map((word) => {
-        return {
-            name: word
+            })
         }
-    });
-}
+      };
 
-function getSuggestion(puzzles) {
-    let length = isUnlimited ? document.querySelector('.RowL').childNodes.length : 5;
-    let rows = document.querySelectorAll('.RowL').length && document.querySelectorAll('.RowL') ||
-        (document.querySelectorAll('.guesses').length && (document.querySelectorAll('.guesses div') || [])) ||
-        document.querySelector('game-app').shadowRoot.querySelector('game-theme-manager').querySelectorAll('game-row');
+      return (dictMapper[hinter.state.game] || dictMapper.default)();
+    },
+    hint: (dict, rows) => {
+      const {possibilities, exactArr} = hinter.words.possible(dict, rows);
+      let commonSort = hinter.words.sort.common(possibilities, exactArr);
 
-    let correct = new Array(length).fill('.');
-    let present = [];
-    let presentPositionExclude = new Array(length).fill('.');
-    let absent = [];
-    let absentPositionExclude = new Array(length).fill('.');
+      let limit = 10;
+      alert([
+        `Possibilities: ${possibilities.length}`,
+        commonSort.slice(0, limit).map(word => `${word.score}: ${word.word}`).join('\n')
+      ].join('\n'));
+    },
+    possible: (dict, rows) => {
+      let wordLength = rows[0].tiles.length;
+      let playedRows = rows.filter(row => row.status === 'played');
 
-    rows.forEach((row) => {
-        let tiles = row.querySelectorAll('.RowL-letter').length && Array.from(row.querySelectorAll('.RowL-letter')) ||
-            row.querySelectorAll('.tile').length && Array.from(row.querySelectorAll('.tile')) ||
-            Array.from(row.shadowRoot.querySelectorAll('game-tile'));
+      let exactArr = Array(wordLength).fill('');
+      let excludeArr = Array(wordLength).fill('');
+      let cards = ((output) => {
+        playedRows.forEach((row, i, array, rowOutput = {}) => {
+          row.tiles.forEach((tile, tileIndex) => {
+            rowOutput[tile.letter] = (rowOutput[tile.letter] ?? 0) +
+              (tile.statusId >= 3 ? 1 : 0);
 
-        /* Correct tiles */
-        tiles.forEach((tile, index) => {
-            let isCorrect = tile.getAttribute('evaluation') === 'correct' ||
-                Array.from(tile.classList).includes('letter-correct') ||
-                Array.from(tile.classList).includes('exact');
-
-            if (isCorrect) {
-                correct[index] = tile.getAttribute('letter') || tile.innerText.trim();
+            if (tile.status === 'correct') {
+              exactArr[tileIndex] = tile.letter;
             }
+
+            if (tile.status === 'present') {
+              excludeArr[tileIndex] += tile.letter;
+            }
+          });
+          Object.keys(rowOutput).forEach(letter => {
+            output[letter] = Math.max(
+              (output[letter] ?? 0),
+              rowOutput[letter]
+            );
+          });
         });
+        return output;
+      })({});
 
-        /* Present tiles */
-        let rowPresent = [...new Set(tiles.map((tile, index) => {
-            let evaluation = tile.getAttribute('evaluation');
-            let isPresent = evaluation === 'present' ||
-                Array.from(tile.classList).includes('letter-elsewhere') ||
-                Array.from(tile.classList).includes('included');
-            let isAbsent = evaluation === 'absent' ||
-                Array.from(tile.classList).includes('excluded');
+      let exactReg = new RegExp(`^${exactArr.map(letter => letter || '.{1}').join('')}$`, 'i');
+      let excludeReg = new RegExp(`^${excludeArr.map(letter => `[^${letter}]` || '.{1}').join('')}$`, 'i');
+      return {
+        possibilities: dict
+          .filter(word => word.match(exactReg))
+          .filter(word => word.match(excludeReg))
+          .filter(word => Object.keys(cards).every(letter => {
+            return cards[letter] // if there are *some* of this letter
+              ? (word.match(new RegExp(letter, 'gi'))?.length ?? 0) >= cards[letter]
+              : !word.match(letter);
+          })),
+        exactArr
+      };
+    },
+    sort: {
+      common: (possibilities, exactArr) => {
+        let distribution = Array(possibilities[0].length)
+          .fill('').map(() => ({}))
+          .map((slot, i) => {
+            possibilities.forEach(possibility => {
+              slot[possibility[i]] = (slot[possibility[i]] ?? 0) + 1;
+            })
+            return slot;
+          });
 
-            if (isPresent || isAbsent) {
-                let letter = tile.getAttribute('letter') || tile.innerText.trim();
-                let arr = isPresent ? presentPositionExclude : absentPositionExclude;
-                arr[index] = arr[index].pop ?
-                    arr[index] : [];
-                arr[index].push(letter);
+        return possibilities
+          .map(word => {
+            return {
+              word,
+              score: word.split('').reduce((accumulator, letter, i) => {
+                let distributionScore = (distribution[i][letter] ?? 0);
+                let letterCount = word.match(new RegExp(letter,'g')).length;
+                return accumulator +
+                  letter === exactArr[i]
+                  ? 0
+                  : (distributionScore / letterCount);
+              }, 0)
+            };
+          })
+          .sort((a, b) => String(b.score).localeCompare(String(a.score), 'en', { numeric: true }));      }
+    }
+  },
 
-                return isPresent ? letter : '';
-            } else {
-                return '';
-            }
-        }).filter(letter => letter))];
-        present = [...new Set(present.concat(rowPresent))];
+  util: {
+    resolveMapper: (mapper, ...args) => {
+      if (mapper.hasOwnProperty(hinter.state.game)) {
+        return mapper[hinter.state.game](...args);
+      }
 
-        /* Absent tiles */
-        let rowAbsent = [...new Set(tiles.filter((tile) => {
-            let isAbsent = tile.getAttribute('evaluation') === 'absent' ||
-                Array.from(tile.classList).includes('letter-absent') ||
-                Array.from(tile.classList).includes('excluded');
+      let keys = Object.keys(mapper);
+      for (let i = 0; i < keys.length; i++) {
+        let output = mapper[keys[i]](...args);
+        if (!isNaN(output) || output) {
+          return output;
+        }
+      }
+    },
+  },
 
-            return isAbsent && tiles.every((innerTile) => {
-                if (tile === innerTile) { return true; }
-
-                let a = tile.getAttribute('letter') || tile.innerText.trim();
-                let b = innerTile.getAttribute('letter') || innerTile.innerText.trim();
-
-                if (a !== b) { return true; }
-
-                let innerAbsent = innerTile.getAttribute('evaluation') === 'absent' ||
-                    Array.from(innerTile.classList).includes('letter-absent') ||
-                    Array.from(innerTile.classList).includes('excluded');
-
-                return innerAbsent;
+  rows: {
+    getDom: () => {
+      return hinter.util.resolveMapper({
+        wordle: () => {
+          return Array.from(document.querySelectorAll('[role="group"]'))
+            .filter(node => node.className.match('row'));
+        }
+      });
+    },
+    status: (statusRow) => {
+      return hinter.util.resolveMapper({
+        wordle: (wordleRow) => {
+          return [
+            (row) => !Boolean(row.node.innerText),
+            (row) => row.node.querySelector('[data-state="empty"]'),
+            () => { return true; }
+          ].findIndex(mapper => Boolean(mapper(wordleRow)));
+        }
+      }, statusRow);
+    }
+  },
+  tiles: {
+    getDom: () => {
+      return hinter.util.resolveMapper({
+        wordle: () => {
+          return hinter.rows.getDom()
+            ?.map(rowNode => {
+              return {
+                node: rowNode,
+                tiles: Array.from(rowNode.children).map(tile => {
+                  return {
+                    node: tile
+                  };
+                })
+              };
             });
-        }).map((tile) => {
-            return tile.getAttribute('letter') || tile.innerText.trim();;
-        }))];
-        absent = [...new Set(absent.concat(rowAbsent))];
-    });
-
-    /* Covert to regex */
-    let correctReg = new RegExp('^' + correct.join('') + '$', 'i');
-    let presentReg = new RegExp('^' + presentPositionExclude.map((item) => {
-        if (item.pop) {
-            return `[^${item.join('')}]`;
         }
-        return item;
-    }).join('') + '$', 'i');
-    let absentTileReg = new RegExp('^' + absentPositionExclude.map((item) => {
-        if (item.pop) {
-            return `[^${[...new Set(item.concat(absent))].sort().join('')}]`;
+      });
+    },
+    status: (statusTile) => {
+      return hinter.util.resolveMapper({
+        wordle: (wordleTile) => {
+          let tileState = wordleTile.node.querySelector('[data-state]').dataset.state;
+          return [
+            'empty',
+            'tbd',
+            'absent',
+            'present',
+            'correct',
+          ].indexOf(tileState);
         }
-        return `[^${absent.join('')}]`;
-    }).join('') + '$', 'i');
-    let absentReg = new RegExp(`[${absent.join('')}]`, 'i');
-
-    function isPossible(puzzle) {
-        let isCorrectMatch = !!puzzle.match(correctReg);
-        let isPresentMatch = present.every((letter) => {
-            return puzzle.toLowerCase().includes(letter.toLowerCase());
-        });
-        let isPresentPosition = !!puzzle.match(presentReg);
-        let isAbsentTileMatch = !puzzle.match(absentTileReg);
-        let isAbsentMatch = absent.length && puzzle.match(absentReg);
-
-        return isCorrectMatch && isPresentMatch && isPresentPosition && !isAbsentTileMatch && !isAbsentMatch;
+      }, statusTile);
+    },
+    letter: (statusTile) => {
+      return hinter.util.resolveMapper({
+        wordle: (wordleTile) => {
+          return wordleTile.node.innerText.trim();
+        }
+      }, statusTile);
     }
+  },
+};
 
-    /**** START ARRAY BUILDING */
-    let magicNum = 200;
-    let possibilities = puzzles.filter((puzzle) => isPossible(puzzle.name));
-    let showElimination = (possibilities.length > 2 && possibilities.length < magicNum) && !isAnti;
-
-    let rankArr = getRankArr(puzzles);
-    let possibleRankArr = getRankArr(possibilities);
-
-    let eliminationLetters = [];
-    let eliminationRankArr = [];
-    let possibleEliminationRankArr = [];
-
-    if (showElimination) {
-        eliminationLetters = getEliminationLetters(possibilities, present, correct);
-        eliminationRankArr = getRankArr(puzzles, eliminationLetters);
-        possibleEliminationRankArr = getRankArr(possibilities, eliminationLetters);
-    }
-
-    let tempPuzzles = (showElimination ? window.puzzles : possibilities);
-
-    tempPuzzles.forEach((puzzle) => {
-        let thisIsPossible = isPossible(puzzle.name);
-        Object.assign(puzzle, {
-            isPossible: thisIsPossible,
-            puzzleRank: getWordRank(rankArr, puzzle.name),
-            possibleRank: thisIsPossible && getWordRank(possibleRankArr, puzzle.name),
-            eliminationRank: !thisIsPossible && getWordRank(eliminationRankArr, puzzle.name),
-            possibleEliminationRank: thisIsPossible && getWordRank(possibleEliminationRankArr, puzzle.name)
-        });
-    });
-
-    tempPuzzles
-        .sort((a, b) => {
-            return String([... new Set(b.name.split(''))].length).localeCompare([... new Set(a.name.split(''))].length, 'en', { numeric: true }) ||
-                String(b.possibleEliminationRank).localeCompare(a.possibleEliminationRank, 'en', { numeric: true }) ||
-                String(b.possibleRank).localeCompare(a.possibleRank, 'en', { numeric: true }) ||
-                String(b.eliminationRank).localeCompare(a.eliminationRank, 'en', { numeric: true }) ||
-                String(b.puzzleRank).localeCompare(a.puzzleRank, 'en', { numeric: true });
-        });
-
-    let best = tempPuzzles.slice()
-        .filter((puzzle) => puzzle.isPossible);
-
-    if (isAnti) {
-        best.reverse();
-    }
-
-    let isSame = window.puzzles.slice(0,2).map((puzzle) => puzzle.name).join('') ===
-        best.slice(0,2).map((puzzle) => puzzle.name).join('');
-    let hasElimination = !isSame && best.length > 2 && showElimination;
-
-    let outputs = [
-        [`Possibilities (${possibilities.length})`]
-            .concat(best.slice(0, hasElimination ? 5 : 10).map((puzzle) => { return `  ${puzzle.name}`; }))
-            .join('\n')
-            .trim(),
-    ];
-
-
-    if (hasElimination) {
-        outputs.push([`Elimination`]
-            .concat(window.puzzles.slice(0, 2).map((puzzle) => { return `  ${puzzle.name}`; }))
-            .join('\n')
-            .trim()
-        );
-    }
-
-    let output = outputs.filter(Boolean).join('\n---\n');
-    console.log(output);
-    alert(output);
-}
-
-function getRankArr(arr, filterArray) {
-    let length = isUnlimited ? document.querySelector('.RowL').childNodes.length : 5;
-    let rankArr = new Array(length).fill('').map(() => {return {}; });
-    arr.forEach((puzzle) => {
-        puzzle.name.split('').forEach((letter, index) => {
-            if (!filterArray || filterArray.includes(letter)) {
-                rankArr[index][letter] ??= 0;
-                rankArr[index][letter] ++;
-            }
-        });
-    });
-    return rankArr;
-}
-
-function getWordRank(rankArr, word) {
-    if (!rankArr || !rankArr.length) {
-        return 0;
-    }
-
-    let slotRank = word.split('').map((letter, index) => {
-        return (rankArr[index][letter] / word.match(new RegExp(letter, 'gi'))?.length) || 0;
-    }).reduce((partialSum, curSum) => partialSum + curSum, 0);
-
-    let letterRank = [... new Set(word.split(''))].map((letter) => {
-        return rankArr.reduce((partialSum, rankSlot) => {
-            return (rankSlot[letter] || 0) + partialSum;
-        }, 0);
-    }).reduce((partialSum, curSum) => partialSum + curSum, 0);
-
-    return slotRank + ((letterRank / 5) / 2);
-}
-
-function getEliminationLetters(possibilities, present, correct) {
-    let possibleLetters = [... new Set(possibilities
-        .map((puzzle) => puzzle.name.toLowerCase().split(''))
-        .flat())];
-    let presentLetters = present.concat(correct)
-        .filter((letter) => { return letter !== '.'; });
-
-    [... new Set(presentLetters)].forEach((letter) => {
-        possibleLetters.splice(possibleLetters.indexOf(letter.toLowerCase()), 1);
-    });
-
-    return possibleLetters;
-}
-
-function sortFromMid(arr) {
-    let res = [];
-    for (let i = Math.ceil(arr.length / 2); i >= 0; i--) {
-        res.push(arr[i]);
-        res.push(arr[arr.length - i + 1])
-    }
-    return res.filter(x => x !== undefined);
-}
+hinter.init();
