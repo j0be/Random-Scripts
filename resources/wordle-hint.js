@@ -121,8 +121,8 @@ window.hinter = {
         return output;
       })({});
 
-      let exactReg = new RegExp(`^${exactArr.map(letter => letter || '.{1}').join('')}$`, 'i');
-      let excludeReg = new RegExp(`^${excludeArr.map(letter => `[^${letter}]` || '.{1}').join('')}$`, 'i');
+      let exactReg = new RegExp(`^${exactArr.map(letter => letter || '\w').join('')}$`, 'i');
+      let excludeReg = new RegExp(`^${excludeArr.map(letter => `[^${letter}]` || '\w').join('')}$`, 'i');
       return {
         possibilities: dict
           .filter(word => word.match(exactReg))
