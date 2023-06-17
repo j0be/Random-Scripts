@@ -1,4 +1,3 @@
-javascript: (() => {
 const [ CORRECT, PRESENT, ABSENT ] = [ 'correct', 'present', 'absent' ];
 const init = () => {
   const site = getSiteName();
@@ -166,4 +165,3 @@ return init().catch(err => {
     possible.slice(0, 10).map(word => `* ${word}`).join('\n')
   );
 });
-})();
