@@ -31,10 +31,13 @@ const init = () => {
       [board[0]?.length - 1]: midSort, // Second to last
     }[board.length] || hiSort;
 
-    return possible
-      .sort((a, b) => sortMethod({usage: fullUsage, length: dictionary.length, a, b }))
-      .sort((a, b) => sortMethod({usage: possibleUsage, length: possible.length, a, b }))
-      .sort((a, b) => String(Array.from(new Set(b.split(''))).length).localeCompare(String(Array.from(new Set(a.split(''))).length), 'en', { numeric: true }))
+    return {
+      sortName: sortMethod.name,
+      possible: possible
+        .sort((a, b) => sortMethod({usage: fullUsage, length: dictionary.length, a, b }))
+        .sort((a, b) => sortMethod({usage: possibleUsage, length: possible.length, a, b }))
+        .sort((a, b) => String(Array.from(new Set(b.split(''))).length).localeCompare(String(Array.from(new Set(a.split(''))).length), 'en', { numeric: true }))
+    };
   });
 };
 
@@ -160,8 +163,8 @@ const hiSort = ({ usage, length, a, b }) => {
 /* INITIALIZATION */
 return init().catch(err => {
   alert(err?.message ?? 'Unknown error');
-}).then(possible => {
-  alert('Possible Options:\n' +
+}).then(({ sortName , possible }) => {
+  alert(`Possible Options (${sortName}):\n` +
     possible.slice(0, 10).map(word => `* ${word}`).join('\n')
   );
 });
