@@ -15,6 +15,7 @@ const init = () => {
       const regex = getRegex(summary);
 
       return resolve({
+        board,
         solution,
         dictionary,
         possible: dictionary
@@ -22,13 +23,17 @@ const init = () => {
           .filter(word => regex.test(word))
       });
     });
-  }).then(({dictionary, possible, solution}) => {
+  }).then(({dictionary, possible, board, solution}) => {
     const possibleUsage = getUsage(possible);
     const fullUsage = getUsage(dictionary);
+    const sortMethod = {
+      0: midSort,
+      [board[0]?.length - 1]: midSort // Second to last
+    }[board.length] || hiSort;
 
     return possible
-      .sort((a, b) => midSort({usage: fullUsage, length: dictionary.length, a, b }))
-      .sort((a, b) => midSort({usage: possibleUsage, length: possible.length, a, b }))
+      .sort((a, b) => sortMethod({usage: fullUsage, length: dictionary.length, a, b }))
+      .sort((a, b) => sortMethod({usage: possibleUsage, length: possible.length, a, b }))
       .sort((a, b) => String(Array.from(new Set(b.split(''))).length).localeCompare(String(Array.from(new Set(a.split(''))).length), 'en', { numeric: true }))
     ;
   });
@@ -57,6 +62,7 @@ const getBoard = (site) => {
   let boardMapper = {
     wordle: () => Array.from(document.getElementById('wordle-app-game').querySelectorAll('[class^="Row"], [class^="row"]'))
       .map(row => Array.from(row.childNodes).map((tileNode) => getTile(site, tileNode)))
+      .filter(row => Boolean(row.join('')))
   };
   return boardMapper[site]();
 };
@@ -143,6 +149,13 @@ const midSort = ({ usage, length, a, b }) => {
     return aggregate + Math.abs(length/2 - usage[index][letter]);
   }, 0));
   return String(aScore).localeCompare(String(bScore), 'en', { numeric: true });
+};
+
+const hiSort = ({ usage, length, a, b }) => {
+  const [aScore, bScore] = [a, b].map(word => word.toLowerCase().split('').reduce((aggregate, letter, index) => {
+    return aggregate + usage[index][letter];
+  }, 0));
+  return String(bScore).localeCompare(String(aScore), 'en', { numeric: true });
 };
 
 /* INITIALIZATION */
