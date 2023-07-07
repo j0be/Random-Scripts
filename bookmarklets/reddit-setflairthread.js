@@ -45,10 +45,16 @@ javascript: (function () {
             init: function () {
                 flair.setup.initCSS();
                 flair.get.allComments();
-                
-                fdata.stream.title = fdata.stream.title.match(/Round \d+/) ?
-                    fdata.stream.title.match(/Round (\d+)/)[1] :
-                    fdata.stream.threadId;
+
+                fdata.stream.title = flair.setup.getFlairThreadNumber();
+            },
+            getFlairThreadNumber: () => {
+                let flairStartDate = new Date(1392354000000);
+                let todayDate = new Date();
+                let months = (todayDate.getFullYear() - flairStartDate.getFullYear()) * 12;
+                months -= flairStartDate.getMonth();
+                months += todayDate.getMonth();
+                return Math.max(0, months);
             },
             initCSS: function () {
                 var css = '#flair-output { color: #000; position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); z-index: 999; overflow: visible; } ';
