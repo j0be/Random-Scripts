@@ -165,6 +165,6 @@ return init().catch(err => {
   alert(err?.message ?? 'Unknown error');
 }).then(({ sortName , possible }) => {
   alert(`Possible Options (${sortName}):\n` +
-    possible.slice(0, 10).map(word => `* ${word}`).join('\n')
+    possible.slice(0, 100).map(word => `* ${word}`).join('\n')
   );
 });
