@@ -49,7 +49,7 @@ javascript: (function () {
                 fdata.stream.title = flair.setup.getFlairThreadNumber();
             },
             getFlairThreadNumber: () => {
-                let flairStartDate = new Date(1392354000000);
+                let flairStartDate = new Date(1394082000000);
                 let todayDate = new Date();
                 let months = (todayDate.getFullYear() - flairStartDate.getFullYear()) * 12;
                 months -= flairStartDate.getMonth();
